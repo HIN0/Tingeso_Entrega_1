@@ -32,7 +32,8 @@ public class ReportService {
         if (start != null && end != null) {
             return loanRepository.findByStartDateBetween(start, end)
                     .stream()
-                    .filter(loan -> loan.getStatus() == LoanStatus.ACTIVE || loan.getStatus() == LoanStatus.LATE)
+                    .filter(loan -> loan.getStatus() == LoanStatus.ACTIVE || 
+                                    loan.getStatus() == LoanStatus.LATE)
                     .collect(Collectors.toList());
         }
         return loanRepository.findAll().stream()
