@@ -2,39 +2,32 @@ package entities;
 
 import entities.enums.MovementType;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "kardex")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class KardexEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(unique = true, nullable = false)
     private Long id;
 
-    // Relación con herramienta
-    @ManyToOne
-    @JoinColumn(name = "tool_id", nullable = false)
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "tool_id")
     private ToolEntity tool;
 
     @Enumerated(EnumType.STRING)
-    private MovementType type; // PRÉSTAMO, DEVOLUCIÓN, BAJA, REPARACIÓN, INGRESO
+    private MovementType type;
 
-    @Column(nullable = false)
-    private Integer quantity;
-
-    @Column(nullable = false)
+    @Column(name = "movement_date")
     private LocalDateTime date;
 
-    // Usuario responsable (Empleado/Admin)
-    @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
+    private Integer quantity;
+
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "user_id")
     private UserEntity user;
 }

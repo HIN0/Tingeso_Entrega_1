@@ -1,6 +1,6 @@
 package entities.enums;
 
 public enum UserRole {
-    ADMIN,
-    EMPLOYEE
+    ADMIN,    // Acceso total
+    EMPLOYEE  // Préstamos, devoluciones y reportes
 }

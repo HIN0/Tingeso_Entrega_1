@@ -1,8 +1,8 @@
 package entities.enums;
 
 public enum ToolStatus {
-    AVAILABLE,
-    LOANED,
-    UNDER_REPAIR,
-    DECOMMISSIONED
+    AVAILABLE,      // Disponible
+    LOANED,         // Prestada
+    REPAIRING,      // En reparación
+    DECOMMISSIONED  // Dada de baja
 }

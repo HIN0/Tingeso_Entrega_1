@@ -1,12 +1,11 @@
 package controllers;
 
-// Entidad, Servicio
 import entities.ToolEntity;
+import entities.UserEntity;
 import services.ToolService;
-
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/tools")
@@ -24,27 +23,21 @@ public class ToolController {
     }
 
     @GetMapping("/{id}")
-    public Optional<ToolEntity> getToolById(@PathVariable Long id) {
+    public ToolEntity getToolById(@PathVariable Long id) {
         return toolService.getToolById(id);
     }
 
     @PostMapping
     public ToolEntity createTool(@RequestBody ToolEntity tool) {
-        return toolService.createTool(tool);
-    }
-
-    @PutMapping("/{id}")
-    public ToolEntity updateTool(@PathVariable Long id, @RequestBody ToolEntity tool) {
-        return toolService.updateTool(id, tool);
+        // Simulamos un usuario admin hasta tener seguridad real
+        UserEntity fakeUser = UserEntity.builder().id(1L).username("admin").build();
+        return toolService.createTool(tool, fakeUser);
     }
 
     @PutMapping("/{id}/decommission")
     public ToolEntity decommissionTool(@PathVariable Long id) {
-        return toolService.decommissionTool(id);
-    }
-
-    @DeleteMapping("/{id}")
-    public void deleteTool(@PathVariable Long id) {
-        toolService.deleteTool(id);
+        // Simulamos un usuario admin hasta tener seguridad real
+        UserEntity fakeUser = UserEntity.builder().id(1L).username("admin").build();
+        return toolService.decommissionTool(id, fakeUser);
     }
 }

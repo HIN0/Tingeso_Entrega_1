@@ -2,43 +2,33 @@ package entities;
 
 import entities.enums.LoanStatus;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
 import java.time.LocalDate;
 
 @Entity
 @Table(name = "loans")
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
+@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class LoanEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(unique = true, nullable = false)
     private Long id;
 
-    // Relación con cliente
-    @ManyToOne
-    @JoinColumn(name = "client_id", nullable = false)
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "client_id")
     private ClientEntity client;
 
-    // Relación con herramienta
-    @ManyToOne
-    @JoinColumn(name = "tool_id", nullable = false)
+    @ManyToOne(optional = false)
+    @JoinColumn(name = "tool_id")
     private ToolEntity tool;
 
-    @Column(nullable = false)
     private LocalDate startDate;
-
-    @Column(nullable = false)
-    private LocalDate dueDate; // fecha pactada de devolución
-
-    private LocalDate returnDate; // fecha real de devolución
+    private LocalDate dueDate;
+    private LocalDate returnDate;
 
     @Enumerated(EnumType.STRING)
-    private LoanStatus status; // VIGENTE, ATRASADO, DEVUELTO
+    private LoanStatus status;
 
-    private Double penaltyAmount; // multas calculadas (si aplica)
+    private Double totalPenalty; // multas calculadas
 }

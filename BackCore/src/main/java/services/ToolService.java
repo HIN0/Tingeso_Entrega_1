@@ -1,73 +1,62 @@
 package services;
 
-// Entidad y Repositorio
 import entities.ToolEntity;
+import entities.UserEntity;
+import entities.enums.MovementType;
 import entities.enums.ToolStatus;
+import entities.enums.UserRole;
 import repositories.ToolRepository;
-
 import org.springframework.stereotype.Service;
+
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class ToolService {
 
     private final ToolRepository toolRepository;
+    private final KardexService kardexService;
 
-    public ToolService(ToolRepository toolRepository) {
+    public ToolService(ToolRepository toolRepository, KardexService kardexService) {
         this.toolRepository = toolRepository;
+        this.kardexService = kardexService;
     }
 
-    // Obtener todas las herramientas
     public List<ToolEntity> getAllTools() {
         return toolRepository.findAll();
     }
 
-    // Obtener herramienta por ID
-    public Optional<ToolEntity> getToolById(Long id) {
-        return toolRepository.findById(id);
+    public ToolEntity getToolById(Long id) {
+        return toolRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Tool not found"));
     }
 
-    // Registrar nueva herramienta (con reglas de negocio)
-    public ToolEntity createTool(ToolEntity tool) {
+    public ToolEntity createTool(ToolEntity tool, UserEntity user) {
         if (tool.getName() == null || tool.getCategory() == null || tool.getReplacementValue() == null) {
             throw new IllegalArgumentException("Tool must have name, category and replacement value");
         }
-        tool.setStatus(ToolStatus.AVAILABLE); // siempre arranca disponible
-        if (tool.getStock() == null || tool.getStock() < 0) {
-            tool.setStock(0);
-        }
-        return toolRepository.save(tool);
+        tool.setStatus(ToolStatus.AVAILABLE);
+        ToolEntity saved = toolRepository.save(tool);
+
+        kardexService.registerMovement(saved, MovementType.INCOME, 1, user);
+        return saved;
     }
 
-    // Dar de baja herramienta (solo admin → se controla en capa seguridad, aquí lógica)
-    public ToolEntity decommissionTool(Long id) {
-        ToolEntity tool = toolRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Tool not found"));
+    public ToolEntity decommissionTool(Long id, UserEntity user) {
+        ToolEntity tool = getToolById(id);
+
+        if (user.getRole() != UserRole.ADMIN) {
+            throw new SecurityException("Only admins can decommission tools");
+        }
+
+        if (tool.getStatus() == ToolStatus.LOANED || tool.getStatus() == ToolStatus.REPAIRING) {
+            throw new IllegalStateException("Cannot decommission a tool while loaned or under repair");
+        }
 
         tool.setStatus(ToolStatus.DECOMMISSIONED);
         tool.setStock(0);
-        return toolRepository.save(tool);
-    }
+        ToolEntity saved = toolRepository.save(tool);
 
-    // Actualizar herramienta (ej: reparación, stock, etc.)
-    public ToolEntity updateTool(Long id, ToolEntity updatedTool) {
-        ToolEntity existing = toolRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Tool not found"));
-
-        if (updatedTool.getCategory() != null) existing.setCategory(updatedTool.getCategory());
-        if (updatedTool.getReplacementValue() != null) existing.setReplacementValue(updatedTool.getReplacementValue());
-        if (updatedTool.getStock() != null && updatedTool.getStock() >= 0) existing.setStock(updatedTool.getStock());
-        if (updatedTool.getStatus() != null) existing.setStatus(updatedTool.getStatus());
-
-        return toolRepository.save(existing);
-    }
-
-    // Eliminar herramienta completamente (no recomendado en negocio, pero como opción)
-    public void deleteTool(Long id) {
-        if (!toolRepository.existsById(id)) {
-            throw new IllegalArgumentException("Tool not found");
-        }
-        toolRepository.deleteById(id);
+        kardexService.registerMovement(saved, MovementType.DECOMMISSION, 1, user);
+        return saved;
     }
 }

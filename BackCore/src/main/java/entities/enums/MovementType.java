@@ -1,7 +1,7 @@
 package entities.enums;
 
 public enum MovementType {
-    INCOME,        // Ingreso de herramienta nueva
+    INCOME,        // Registro de herramienta nueva
     LOAN,          // Préstamo
     RETURN,        // Devolución
     REPAIR,        // En reparación

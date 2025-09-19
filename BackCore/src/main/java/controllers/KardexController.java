@@ -1,10 +1,10 @@
 package controllers;
 
-// Entidad, Servicios
 import entities.KardexEntity;
+import entities.ToolEntity;
 import services.KardexService;
-
 import org.springframework.web.bind.annotation.*;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -18,24 +18,14 @@ public class KardexController {
         this.kardexService = kardexService;
     }
 
-    // Listar todos los movimientos
-    @GetMapping
-    public List<KardexEntity> getAllMovements() {
-        return kardexService.getAllMovements();
-    }
-
-    // Movimientos de una herramienta
     @GetMapping("/tool/{toolId}")
-    public List<KardexEntity> getMovementsByTool(@PathVariable Long toolId) {
-        return kardexService.getMovementsByTool(toolId);
+    public List<KardexEntity> getMovementsByTool(@PathVariable ToolEntity tool) {
+        return kardexService.getMovementsByTool(tool);
     }
 
-    // Movimientos por rango de fechas (ej: ?start=2025-08-01T00:00:00&end=2025-08-29T23:59:59)
-    @GetMapping("/date-range")
-    public List<KardexEntity> getMovementsByDateRange(@RequestParam String start,
-                                                      @RequestParam String end) {
-        LocalDateTime startDate = LocalDateTime.parse(start);
-        LocalDateTime endDate = LocalDateTime.parse(end);
-        return kardexService.getMovementsByDateRange(startDate, endDate);
+    @GetMapping("/date")
+    public List<KardexEntity> getMovementsByDate(@RequestParam String start,
+                                                 @RequestParam String end) {
+        return kardexService.getMovementsByDate(LocalDateTime.parse(start), LocalDateTime.parse(end));
     }
 }

@@ -1,10 +1,8 @@
 package controllers;
 
-// Entidad, Servicios
 import entities.LoanEntity;
 import entities.UserEntity;
 import services.LoanService;
-
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
@@ -20,29 +18,25 @@ public class LoanController {
         this.loanService = loanService;
     }
 
-    @GetMapping
-    public List<LoanEntity> getAllLoans() {
-        return loanService.getAllLoans();
-    }
-
-    @GetMapping("/{id}")
-    public LoanEntity getLoanById(@PathVariable Long id) {
-        return loanService.getLoanById(id);
-    }
-
     @PostMapping
     public LoanEntity createLoan(@RequestParam Long clientId,
                                  @RequestParam Long toolId,
-                                 @RequestParam String dueDate,
-                                 @RequestBody UserEntity user) {
-        return loanService.createLoan(clientId, toolId, LocalDate.parse(dueDate), user);
+                                 @RequestParam String dueDate) {
+        UserEntity fakeUser = UserEntity.builder().id(2L).username("employee").build();
+        return loanService.createLoan(clientId, toolId, LocalDate.parse(dueDate), fakeUser);
     }
 
-    @PutMapping("/{loanId}/return")
-    public LoanEntity returnLoan(@PathVariable Long loanId,
+    @PutMapping("/{id}/return")
+    public LoanEntity returnLoan(@PathVariable Long id,
+                                 @RequestParam Long toolId,
                                  @RequestParam boolean damaged,
-                                 @RequestParam boolean irreparable,
-                                 @RequestBody UserEntity user) {
-        return loanService.returnLoan(loanId, damaged, irreparable, user);
+                                 @RequestParam boolean irreparable) {
+        UserEntity fakeUser = UserEntity.builder().id(2L).username("employee").build();
+        return loanService.returnLoan(id, toolId, damaged, irreparable, fakeUser);
+    }
+
+    @GetMapping("/active")
+    public List<LoanEntity> getActiveLoans() {
+        return loanService.getActiveLoans();
     }
 }
