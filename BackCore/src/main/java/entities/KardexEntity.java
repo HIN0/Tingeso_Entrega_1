@@ -1,33 +1,38 @@
 package entities;
 
-import entities.enums.MovementType;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDateTime;
 
+import entities.enums.MovementType;
+
 @Entity
 @Table(name = "kardex")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class KardexEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "tool_id")
+    @ManyToOne
+    @JoinColumn(name = "tool_id", nullable = false)
     private ToolEntity tool;
 
     @Enumerated(EnumType.STRING)
     private MovementType type;
 
     @Column(name = "movement_date")
-    private LocalDateTime date;
+    private LocalDateTime movementDate;
 
     private Integer quantity;
 
-    @ManyToOne(optional = false)
-    @JoinColumn(name = "user_id")
+    @ManyToOne
+    @JoinColumn(name = "user_id", nullable = false)
     private UserEntity user;
 }

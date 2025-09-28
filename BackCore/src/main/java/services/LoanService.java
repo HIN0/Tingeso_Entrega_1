@@ -32,16 +32,29 @@ public class LoanService {
         this.tariffService = tariffService;
     }
 
+
     /**
      * Crear un préstamo nuevo
      */
     public LoanEntity createLoan(Long clientId, Long toolId, LocalDate dueDate, UserEntity user) {
+
+        System.out.println("=== DEBUG: Entrando a createLoan ===");
+        System.out.println("Parámetros recibidos -> clientId=" + clientId + ", toolId=" + toolId + ", dueDate=" + dueDate);
+
+        // Paso 1: Buscar cliente
+        System.out.println("Paso 1: Buscando cliente con id=" + clientId);
         ClientEntity client = clientRepository.findById(clientId)
                 .orElseThrow(() -> new RuntimeException("Client not found"));
+        System.out.println("Cliente encontrado -> " + client.getName() + " (status=" + client.getStatus() + ")");
+
+        // Paso 2: Buscar herramienta
+        System.out.println("Paso 2: Buscando herramienta con id=" + toolId);
         ToolEntity tool = toolRepository.findById(toolId)
                 .orElseThrow(() -> new RuntimeException("Tool not found"));
+        System.out.println("Herramienta encontrada -> " + tool.getName() + " (status=" + tool.getStatus() + ", stock=" + tool.getStock() + ")");
 
-        // Validaciones de negocio
+        // Paso 3: Validaciones
+        System.out.println("Paso 3: Validando negocio...");
         if (client.getStatus() == ClientStatus.RESTRICTED) {
             throw new IllegalStateException("Client is restricted and cannot request loans");
         }
@@ -51,8 +64,10 @@ public class LoanService {
         if (dueDate.isBefore(LocalDate.now())) {
             throw new IllegalArgumentException("Due date cannot be in the past");
         }
+        System.out.println("Validaciones OK");
 
-        // Crear préstamo
+        // Paso 4: Crear objeto Loan
+        System.out.println("Paso 4: Creando objeto Loan...");
         LoanEntity loan = LoanEntity.builder()
                 .client(client)
                 .tool(tool)
@@ -61,22 +76,31 @@ public class LoanService {
                 .status(LoanStatus.ACTIVE)
                 .totalPenalty(0.0)
                 .build();
+        System.out.println("Loan creado en memoria: " + loan);
 
-        // Actualizar herramienta
+        // Paso 5: Actualizar herramienta
+        System.out.println("Paso 5: Actualizando stock de herramienta...");
         tool.setStock(tool.getStock() - 1);
         if (tool.getStock() == 0) {
             tool.setStatus(ToolStatus.LOANED);
         }
+        System.out.println("Nuevo estado de herramienta -> status=" + tool.getStatus() + ", stock=" + tool.getStock());
 
-        // Guardar cambios
+        // Paso 6: Guardar en BD
+        System.out.println("Paso 6: Guardando Loan en BD...");
         LoanEntity savedLoan = loanRepository.save(loan);
         toolRepository.save(tool);
+        System.out.println("Loan guardado con id=" + savedLoan.getId());
 
-        // Registrar movimiento en Kardex
-        //kardexService.registerMovement(tool, MovementType.LOAN, 1, user);
+        // Paso 7: Registrar Kardex (puedes comentar si da problemas)
+        System.out.println("Paso 7: Registrando movimiento en Kardex...");
+        kardexService.registerMovement(tool, MovementType.LOAN, 1, user);
+        System.out.println("Movimiento registrado");
 
+        System.out.println("=== DEBUG: createLoan finalizado con éxito ===");
         return savedLoan;
-    }
+}
+
 
     /**
      * Registrar devolución de un préstamo

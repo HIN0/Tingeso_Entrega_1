@@ -6,7 +6,11 @@ import lombok.*;
 
 @Entity
 @Table(name = "tools")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class ToolEntity {
 
     @Id
@@ -14,11 +18,14 @@ public class ToolEntity {
     private Long id;
 
     private String name;
+
     private String category;
 
     @Enumerated(EnumType.STRING)
     private ToolStatus status;
 
     private Integer stock;
-    private Double replacementValue;
+
+    @Column(name = "replacement_value")
+    private Integer replacementValue;
 }

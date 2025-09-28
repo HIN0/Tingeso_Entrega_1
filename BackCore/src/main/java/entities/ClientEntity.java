@@ -6,7 +6,11 @@ import lombok.*;
 
 @Entity
 @Table(name = "clients")
-@Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class ClientEntity {
 
     @Id
@@ -15,12 +19,13 @@ public class ClientEntity {
 
     private String name;
 
-    @Column(unique = true, nullable = false)
     private String rut;
 
     private String phone;
+
     private String email;
 
     @Enumerated(EnumType.STRING)
     private ClientStatus status;
 }
+    

@@ -23,7 +23,7 @@ public class KardexService {
         KardexEntity movement = KardexEntity.builder()
                 .tool(tool)
                 .type(type)
-                .date(LocalDateTime.now())
+                .movementDate(LocalDateTime.now())
                 .quantity(quantity)
                 .user(user)
                 .build();
@@ -31,10 +31,10 @@ public class KardexService {
     }
 
     public List<KardexEntity> getMovementsByTool(ToolEntity tool) {
-        return kardexRepository.findByTool(tool);
+        return kardexRepository.findByTool_Id(tool.getId());
     }
 
     public List<KardexEntity> getMovementsByDate(LocalDateTime start, LocalDateTime end) {
-        return kardexRepository.findByDateBetween(start, end);
+        return kardexRepository.findByMovementDateBetween(start, end);
     }
 }
