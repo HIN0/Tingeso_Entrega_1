@@ -1,11 +1,13 @@
 package controllers;
 
+import dtos.LoanRequest;
+import dtos.ReturnLoanRequest;
 import entities.LoanEntity;
 import entities.UserEntity;
-import services.LoanService;
+import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.*;
+import services.LoanService;
 
-import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -18,21 +20,42 @@ public class LoanController {
         this.loanService = loanService;
     }
 
-    @PostMapping
+    // ==== versión JSON (para frontend) ====
+    @PostMapping(consumes = "application/json", produces = "application/json")
+    public LoanEntity createLoanJson(@RequestBody @Valid LoanRequest req) {
+        var currentUser = UserEntity.builder().id(2L).username("employee").build(); 
+        return loanService.createLoan(req.clientId(), req.toolId(), req.dueDate(), currentUser);
+    }
+
+    @PutMapping(path = "/{id}/return", consumes = "application/json", produces = "application/json")
+    public LoanEntity returnLoanJson(@PathVariable Long id, @RequestBody @Valid ReturnLoanRequest req) {
+        var currentUser = UserEntity.builder().id(2L).username("employee").build();
+        return loanService.returnLoan(
+            id,
+            req.toolId(),
+            req.damaged(),
+            req.irreparable(),
+            currentUser
+        );
+    }
+
+
+    @PostMapping(params = {"clientId","toolId","dueDate"})
     public LoanEntity createLoan(@RequestParam Long clientId,
                                  @RequestParam Long toolId,
                                  @RequestParam String dueDate) {
-        UserEntity fakeUser = UserEntity.builder().id(2L).username("employee").build();
-        return loanService.createLoan(clientId, toolId, LocalDate.parse(dueDate), fakeUser);
+        var currentUser = UserEntity.builder().id(2L).username("employee").build();
+        return loanService.createLoan(clientId, toolId, /*start*/ java.time.LocalDate.now(),
+                currentUser);
     }
 
-    @PutMapping("/{id}/return")
+    @PutMapping(path = "/{id}/return", params = {"toolId","damaged","irreparable"})
     public LoanEntity returnLoan(@PathVariable Long id,
                                  @RequestParam Long toolId,
                                  @RequestParam boolean damaged,
                                  @RequestParam boolean irreparable) {
-        UserEntity fakeUser = UserEntity.builder().id(2L).username("employee").build();
-        return loanService.returnLoan(id, toolId, damaged, irreparable, fakeUser);
+        var currentUser = UserEntity.builder().id(2L).username("employee").build();
+        return loanService.returnLoan(id, toolId, damaged, irreparable, currentUser);
     }
 
     @GetMapping("/active")

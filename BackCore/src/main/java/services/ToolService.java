@@ -5,8 +5,9 @@ import entities.UserEntity;
 import entities.enums.MovementType;
 import entities.enums.ToolStatus;
 import entities.enums.UserRole;
-import repositories.ToolRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import repositories.ToolRepository;
 
 import java.util.List;
 
@@ -30,24 +31,27 @@ public class ToolService {
                 .orElseThrow(() -> new RuntimeException("Tool not found"));
     }
 
+    @Transactional
     public ToolEntity createTool(ToolEntity tool, UserEntity user) {
         if (tool.getName() == null || tool.getCategory() == null || tool.getReplacementValue() == null) {
             throw new IllegalArgumentException("Tool must have name, category and replacement value");
         }
-        tool.setStatus(ToolStatus.AVAILABLE);
-        ToolEntity saved = toolRepository.save(tool);
+        if (tool.getStatus() == null) tool.setStatus(ToolStatus.AVAILABLE);
+        if (tool.getStock() == null) tool.setStock(0);
 
+        ToolEntity saved = toolRepository.save(tool);
+        // ingreso de 1 unidad como semilla (si quieres registrar exactamente el stock, ajusta quantity)
         kardexService.registerMovement(saved, MovementType.INCOME, 1, user);
         return saved;
     }
 
+    @Transactional
     public ToolEntity decommissionTool(Long id, UserEntity user) {
         ToolEntity tool = getToolById(id);
 
         if (user.getRole() != UserRole.ADMIN) {
             throw new SecurityException("Only admins can decommission tools");
         }
-
         if (tool.getStatus() == ToolStatus.LOANED || tool.getStatus() == ToolStatus.REPAIRING) {
             throw new IllegalStateException("Cannot decommission a tool while loaned or under repair");
         }
@@ -55,8 +59,46 @@ public class ToolService {
         tool.setStatus(ToolStatus.DECOMMISSIONED);
         tool.setStock(0);
         ToolEntity saved = toolRepository.save(tool);
-
         kardexService.registerMovement(saved, MovementType.DECOMMISSION, 1, user);
         return saved;
+    }
+
+    // ===== Métodos de soporte para préstamos/devoluciones =====
+
+    @Transactional
+    public void decrementStockForLoan(ToolEntity tool, UserEntity user) {
+        if (tool.getStatus() != ToolStatus.AVAILABLE || tool.getStock() == null || tool.getStock() <= 0) {
+            throw new IllegalStateException("Tool is not available");
+        }
+        tool.setStock(tool.getStock() - 1);
+        if (tool.getStock() == 0) {
+            tool.setStatus(ToolStatus.LOANED);
+        }
+        toolRepository.save(tool);
+        kardexService.registerMovement(tool, MovementType.LOAN, 1, user);
+    }
+
+    @Transactional
+    public void incrementStockForReturn(ToolEntity tool, UserEntity user) {
+        // Solo si vuelve a disponible (sin daño)
+        tool.setStock((tool.getStock() == null ? 0 : tool.getStock()) + 1);
+        tool.setStatus(ToolStatus.AVAILABLE);
+        toolRepository.save(tool);
+        kardexService.registerMovement(tool, MovementType.RETURN, 1, user);
+    }
+
+    @Transactional
+    public void markAsRepairing(ToolEntity tool, UserEntity user) {
+        tool.setStatus(ToolStatus.REPAIRING);
+        toolRepository.save(tool);
+        kardexService.registerMovement(tool, MovementType.REPAIR, 1, user);
+    }
+
+    @Transactional
+    public void markAsDecommissioned(ToolEntity tool, UserEntity user) {
+        tool.setStatus(ToolStatus.DECOMMISSIONED);
+        tool.setStock(0);
+        toolRepository.save(tool);
+        kardexService.registerMovement(tool, MovementType.DECOMMISSION, 1, user);
     }
 }

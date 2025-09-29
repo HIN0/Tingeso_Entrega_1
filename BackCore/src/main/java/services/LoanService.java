@@ -1,11 +1,17 @@
 package services;
 
-import entities.*;
-import entities.enums.*;
-import repositories.ClientRepository;
-import repositories.LoanRepository;
-import repositories.ToolRepository;
+import entities.ClientEntity;
+import entities.LoanEntity;
+import entities.ToolEntity;
+import entities.UserEntity;
+import entities.enums.ClientStatus;
+import entities.enums.LoanStatus;
+import entities.enums.ToolStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import repositories.LoanRepository;
+import repositories.ClientRepository;
+import repositories.ToolRepository;
 
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
@@ -17,95 +23,101 @@ public class LoanService {
     private final LoanRepository loanRepository;
     private final ClientRepository clientRepository;
     private final ToolRepository toolRepository;
+    private final ToolService toolService;
     private final KardexService kardexService;
     private final TariffService tariffService;
 
     public LoanService(LoanRepository loanRepository,
                        ClientRepository clientRepository,
                        ToolRepository toolRepository,
+                       ToolService toolService,
                        KardexService kardexService,
                        TariffService tariffService) {
         this.loanRepository = loanRepository;
         this.clientRepository = clientRepository;
         this.toolRepository = toolRepository;
+        this.toolService = toolService;
         this.kardexService = kardexService;
         this.tariffService = tariffService;
     }
 
-
-    /**
-     * Crear un préstamo nuevo
-     */
+    // Versión antigua (por compatibilidad con @RequestParam): usa startDate=Hoy
+    @Transactional
     public LoanEntity createLoan(Long clientId, Long toolId, LocalDate dueDate, UserEntity user) {
+        return createLoan(clientId, toolId, LocalDate.now(), dueDate, user);
+    }
 
-        System.out.println("=== DEBUG: Entrando a createLoan ===");
-        System.out.println("Parámetros recibidos -> clientId=" + clientId + ", toolId=" + toolId + ", dueDate=" + dueDate);
+    // Versión nueva (JSON): incluye startDate
+    @Transactional
+    public LoanEntity createLoan(Long clientId, Long toolId, LocalDate startDate, LocalDate dueDate, UserEntity user) {
 
-        // Paso 1: Buscar cliente
-        System.out.println("Paso 1: Buscando cliente con id=" + clientId);
+        // 1) Buscar cliente y herramienta
         ClientEntity client = clientRepository.findById(clientId)
                 .orElseThrow(() -> new RuntimeException("Client not found"));
-        System.out.println("Cliente encontrado -> " + client.getName() + " (status=" + client.getStatus() + ")");
-
-        // Paso 2: Buscar herramienta
-        System.out.println("Paso 2: Buscando herramienta con id=" + toolId);
         ToolEntity tool = toolRepository.findById(toolId)
                 .orElseThrow(() -> new RuntimeException("Tool not found"));
-        System.out.println("Herramienta encontrada -> " + tool.getName() + " (status=" + tool.getStatus() + ", stock=" + tool.getStock() + ")");
 
-        // Paso 3: Validaciones
-        System.out.println("Paso 3: Validando negocio...");
+        // 2) Validaciones de negocio (enunciado)
         if (client.getStatus() == ClientStatus.RESTRICTED) {
             throw new IllegalStateException("Client is restricted and cannot request loans");
         }
-        if (tool.getStatus() != ToolStatus.AVAILABLE || tool.getStock() <= 0) {
+        if (tool.getStatus() != ToolStatus.AVAILABLE || tool.getStock() == null || tool.getStock() <= 0) {
             throw new IllegalStateException("Tool is not available");
         }
-        if (dueDate.isBefore(LocalDate.now())) {
-            throw new IllegalArgumentException("Due date cannot be in the past");
+        if (startDate == null) startDate = LocalDate.now();
+        if (dueDate == null) throw new IllegalArgumentException("dueDate is required");
+        if (dueDate.isBefore(startDate)) {
+            throw new IllegalArgumentException("Due date must be greater or equal than start date");
         }
-        System.out.println("Validaciones OK");
 
-        // Paso 4: Crear objeto Loan
-        System.out.println("Paso 4: Creando objeto Loan...");
+        // Máximo 5 préstamos activos por cliente
+        long activeCount = loanRepository.findAll().stream()
+                .filter(l -> l.getClient() != null && l.getClient().getId().equals(clientId))
+                .filter(l -> l.getStatus() == LoanStatus.ACTIVE) // solo activos contabilizan
+                .count();
+        if (activeCount >= 5) {
+            throw new IllegalStateException("Client has reached the maximum number of active loans (5)");
+        }
+
+        // No repetir misma herramienta activa sin devolver
+        boolean hasSameToolActive = loanRepository.findAll().stream()
+                .anyMatch(l ->
+                        l.getClient() != null && l.getTool() != null &&
+                        l.getClient().getId().equals(clientId) &&
+                        l.getTool().getId().equals(toolId) &&
+                        l.getStatus() == LoanStatus.ACTIVE);
+        if (hasSameToolActive) {
+            throw new IllegalStateException("Client already has this tool on loan");
+        }
+
+        // 3) Crear Loan (estado ACTIVE)
         LoanEntity loan = LoanEntity.builder()
                 .client(client)
                 .tool(tool)
-                .startDate(LocalDate.now())
+                .startDate(startDate)
                 .dueDate(dueDate)
                 .status(LoanStatus.ACTIVE)
-                .totalPenalty(0.0)
+                .totalPenalty(0.0) // si usas Integer cámbialo; tu código mostraba double
                 .build();
-        System.out.println("Loan creado en memoria: " + loan);
 
-        // Paso 5: Actualizar herramienta
-        System.out.println("Paso 5: Actualizando stock de herramienta...");
-        tool.setStock(tool.getStock() - 1);
-        if (tool.getStock() == 0) {
-            tool.setStatus(ToolStatus.LOANED);
-        }
-        System.out.println("Nuevo estado de herramienta -> status=" + tool.getStatus() + ", stock=" + tool.getStock());
+        // 4) Actualizar inventario (stock/estado) + Kardex LOAN
+        toolService.decrementStockForLoan(tool, user);
 
-        // Paso 6: Guardar en BD
-        System.out.println("Paso 6: Guardando Loan en BD...");
-        LoanEntity savedLoan = loanRepository.save(loan);
-        toolRepository.save(tool);
-        System.out.println("Loan guardado con id=" + savedLoan.getId());
+        // 5) Persistir
+        return loanRepository.save(loan);
+    }
 
-        // Paso 7: Registrar Kardex (puedes comentar si da problemas)
-        System.out.println("Paso 7: Registrando movimiento en Kardex...");
-        kardexService.registerMovement(tool, MovementType.LOAN, 1, user);
-        System.out.println("Movimiento registrado");
-
-        System.out.println("=== DEBUG: createLoan finalizado con éxito ===");
-        return savedLoan;
-}
-
-
-    /**
-     * Registrar devolución de un préstamo
-     */
+    // Devolución (firma antigua: usa returnDate = hoy)
+    @Transactional
     public LoanEntity returnLoan(Long loanId, Long toolId, boolean damaged, boolean irreparable, UserEntity user) {
+        return returnLoan(loanId, toolId, damaged, irreparable, user, LocalDate.now());
+    }
+
+    // Devolución (firma nueva: permite returnDate)
+    @Transactional
+    public LoanEntity returnLoan(Long loanId, Long toolId, boolean damaged, boolean irreparable,
+                                 UserEntity user, LocalDate returnDate) {
+
         LoanEntity loan = loanRepository.findById(loanId)
                 .orElseThrow(() -> new RuntimeException("Loan not found"));
         ToolEntity tool = toolRepository.findById(toolId)
@@ -115,48 +127,45 @@ public class LoanService {
             throw new IllegalStateException("Loan is not active and cannot be returned");
         }
 
-        // Marcar devolución
-        loan.setReturnDate(LocalDate.now());
-        loan.setStatus(LoanStatus.CLOSED);
+        if (returnDate == null) returnDate = LocalDate.now();
 
-        // Calcular multa por atraso
-        long delay = ChronoUnit.DAYS.between(loan.getDueDate(), loan.getReturnDate());
-        if (delay > 0) {
-            double lateFee = delay * tariffService.getDailyLateFee();
-            loan.setTotalPenalty(loan.getTotalPenalty() + lateFee);
-        }
+    // Calcular multa por atraso
+    long delay = ChronoUnit.DAYS.between(loan.getDueDate(), returnDate);
+    double totalPenalty = loan.getTotalPenalty(); // siempre tiene valor inicial (0.0)
 
-        // Evaluar daño de herramienta
+    if (delay > 0) {
+        double lateFee = delay * tariffService.getDailyLateFee();
+        totalPenalty += lateFee;
+    }
+
+        // Daño / estado de herramienta / Kardex
         if (damaged) {
             if (irreparable) {
-                // Herramienta dada de baja
-                loan.setTotalPenalty(loan.getTotalPenalty() + tool.getReplacementValue());
-                tool.setStatus(ToolStatus.DECOMMISSIONED);
-                tool.setStock(0);
-                toolRepository.save(tool);
-                kardexService.registerMovement(tool, MovementType.DECOMMISSION, 1, user);
+                // Baja definitiva: cobrar reposición
+                totalPenalty += tool.getReplacementValue();
+                toolService.markAsDecommissioned(tool, user);
             } else {
-                // Herramienta en reparación
-                loan.setTotalPenalty(loan.getTotalPenalty() + tariffService.getRepairFee());
-                tool.setStatus(ToolStatus.REPAIRING);
-                toolRepository.save(tool);
-                kardexService.registerMovement(tool, MovementType.REPAIR, 1, user);
+                // Reparación: cobrar tarifa de reparación
+                totalPenalty += tariffService.getRepairFee();
+                toolService.markAsRepairing(tool, user);
             }
         } else {
-            // Herramienta devuelta sin daños
-            tool.setStock(tool.getStock() + 1);
-            tool.setStatus(ToolStatus.AVAILABLE);
-            toolRepository.save(tool);
-            kardexService.registerMovement(tool, MovementType.RETURN, 1, user);
+            // Devuelta en buen estado: vuelve a stock
+            toolService.incrementStockForReturn(tool, user);
         }
+
+        // Cerrar préstamo
+        loan.setReturnDate(returnDate);
+        loan.setStatus(LoanStatus.CLOSED);
+        loan.setTotalPenalty(totalPenalty);
 
         return loanRepository.save(loan);
     }
 
-    /**
-     * Listar préstamos activos
-     */
+    @Transactional(readOnly = true)
     public List<LoanEntity> getActiveLoans() {
-        return loanRepository.findByStatus(LoanStatus.ACTIVE);
+        return loanRepository.findAll().stream()
+                .filter(l -> l.getStatus() == LoanStatus.ACTIVE)
+                .toList();
     }
 }
