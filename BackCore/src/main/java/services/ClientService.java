@@ -31,10 +31,10 @@ public class ClientService {
         return clientRepository.save(client);
     }
 
-    public void restrictClient(Long id) {
+    public ClientEntity updateStatus(Long id, ClientStatus status) {
         ClientEntity client = clientRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Client not found"));
-        client.setStatus(ClientStatus.RESTRICTED);
-        clientRepository.save(client);
+        client.setStatus(status);
+        return clientRepository.save(client);
     }
 }

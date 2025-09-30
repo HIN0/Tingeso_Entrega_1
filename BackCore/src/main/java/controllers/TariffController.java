@@ -14,8 +14,15 @@ public class TariffController {
         this.tariffService = tariffService;
     }
 
+    // Consultar tarifas actuales
+    @GetMapping
+    public TariffEntity getTariff() {
+        return tariffService.getTariff();
+    }
+
+    // Modificar tarifas (solo admin debería tener acceso aquí)
     @PutMapping
-    public TariffEntity updateTariff(@RequestBody TariffEntity tariff) {
-        return tariffService.updateTariff(tariff);
+    public TariffEntity updateTariff(@RequestBody TariffEntity updated) {
+        return tariffService.updateTariff(updated);
     }
 }

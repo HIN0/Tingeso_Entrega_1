@@ -24,7 +24,6 @@ public class LoanService {
     private final ClientRepository clientRepository;
     private final ToolRepository toolRepository;
     private final ToolService toolService;
-    private final KardexService kardexService;
     private final TariffService tariffService;
 
     public LoanService(LoanRepository loanRepository,
@@ -37,7 +36,6 @@ public class LoanService {
         this.clientRepository = clientRepository;
         this.toolRepository = toolRepository;
         this.toolService = toolService;
-        this.kardexService = kardexService;
         this.tariffService = tariffService;
     }
 

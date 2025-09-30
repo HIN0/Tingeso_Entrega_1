@@ -2,10 +2,10 @@ package controllers;
 
 import entities.ClientEntity;
 import entities.LoanEntity;
-import entities.ToolEntity;
-import services.ReportService;
 import org.springframework.web.bind.annotation.*;
+import services.ReportService;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -18,18 +18,23 @@ public class ReportController {
         this.reportService = reportService;
     }
 
-    @GetMapping("/active-loans")
-    public List<LoanEntity> getActiveLoans() {
-        return reportService.getActiveLoans();
+    // RF6.1: préstamos por estado (ACTIVE o LATE)
+    @GetMapping("/loans")
+    public List<LoanEntity> getLoansByStatus(@RequestParam String status) {
+        return reportService.getLoansByStatus(status.toUpperCase());
     }
 
-    @GetMapping("/restricted-clients")
-    public List<ClientEntity> getRestrictedClients() {
-        return reportService.getRestrictedClients();
+    // RF6.2: clientes con préstamos atrasados
+    @GetMapping("/clients/late")
+    public List<ClientEntity> getLateClients() {
+        return reportService.getClientsWithLateLoans();
     }
 
-    @GetMapping("/top-tools")
-    public List<ToolEntity> getMostLoanedTools() {
-        return reportService.getMostLoanedTools();
+    // RF6.3: ranking de herramientas más prestadas
+    @GetMapping("/tools/top")
+    public List<Object[]> getTopTools(
+            @RequestParam("from") LocalDate from,
+            @RequestParam("to") LocalDate to) {
+        return reportService.getTopTools(from, to);
     }
 }
