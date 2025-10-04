@@ -95,7 +95,7 @@ public class LoanService {
                 .startDate(startDate)
                 .dueDate(dueDate)
                 .status(LoanStatus.ACTIVE)
-                .totalPenalty(0.0) // si usas Integer cámbialo; tu código mostraba double
+                .totalPenalty(0.0)
                 .build();
 
         // 4) Actualizar inventario (stock/estado) + Kardex LOAN
