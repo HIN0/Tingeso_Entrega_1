@@ -10,15 +10,17 @@ import app.utils.SecurityUtils; // Nueva importación
 
 import java.util.List;
 
-@CrossOrigin(origins = "http://localhost:5173")
 @RestController
 @RequestMapping("/tools")
+@CrossOrigin("*")
 public class ToolController {
 
     private final ToolService toolService;
+    private final SecurityUtils securityUtils; // CAMBIO: Inyectar SecurityUtils
 
-    public ToolController(ToolService toolService) {
+    public ToolController(ToolService toolService, SecurityUtils securityUtils) { // CAMBIO: Constructor con SecurityUtils
         this.toolService = toolService;
+        this.securityUtils = securityUtils;
     }
 
     @GetMapping
@@ -35,7 +37,7 @@ public class ToolController {
     @PreAuthorize("hasRole('ADMIN')") // Solo ADMIN puede crear
     public ToolEntity createTool(@RequestBody ToolEntity tool, Authentication authentication) {
         // Obteniendo el usuario real del JWT
-        UserEntity currentUser = SecurityUtils.getUserFromAuthentication(authentication);
+        UserEntity currentUser = securityUtils.getUserFromAuthentication(authentication); // CAMBIO: Usar instancia
         return toolService.createTool(tool, currentUser);
     }
 
@@ -43,7 +45,7 @@ public class ToolController {
     @PreAuthorize("hasRole('ADMIN')") // Solo ADMIN puede dar de baja
     public ToolEntity decommissionTool(@PathVariable Long id, Authentication authentication) {
         // Obteniendo el usuario real del JWT
-        UserEntity currentUser = SecurityUtils.getUserFromAuthentication(authentication);
+        UserEntity currentUser = securityUtils.getUserFromAuthentication(authentication); // CAMBIO: Usar instancia
         return toolService.decommissionTool(id, currentUser);
     }
 }

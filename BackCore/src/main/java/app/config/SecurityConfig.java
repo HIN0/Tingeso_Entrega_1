@@ -10,12 +10,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource; 
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import java.util.Arrays;
-import java.util.List;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 
 @Configuration
 @EnableWebSecurity
@@ -30,15 +25,17 @@ public class SecurityConfig {
         jwtAuthConverter.setJwtGrantedAuthoritiesConverter(new KeycloakRealmRoleConverter());
 
         http
-            .csrf(csrf -> csrf.disable())
-            .cors(cors -> cors.configurationSource(corsConfigurationSource())) // Usa el Bean que definiremos abajo
+            .csrf(AbstractHttpConfigurer::disable)
+            // SOLUCIÓN CORS: Deshabilitamos el filtro CORS de Security, confiando en @CrossOrigin
+            .cors(AbstractHttpConfigurer::disable) 
+            
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 
-                // Permitir OPTIONS explícitamente (aunque el corsConfigurationSource debería bastar)
+                // CRÍTICO: Permitir OPTIONS para todas las rutas.
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() 
                 
-                // Reglas de Autorización (Roles)
+                // Reglas de Autorización (RBAC)
                 .requestMatchers("/tools/**").hasRole("ADMIN")
                 .requestMatchers("/tariffs/**").hasRole("ADMIN")
                 .requestMatchers("/clients/**").hasRole("ADMIN") 
@@ -52,23 +49,5 @@ public class SecurityConfig {
             );
 
         return http.build();
-    }
-    
-    // === Nueva definición de CORS como Bean de Seguridad ===
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        // Orígenes permitidos (su frontend Vite)
-        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
-        // Métodos permitidos
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        // Encabezados permitidos (permitimos todos para JWT/Authorization)
-        configuration.setAllowedHeaders(List.of("*"));
-        // Permitir credenciales (importante para CORS)
-        configuration.setAllowCredentials(true);
-        
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration); // Aplica a todas las rutas
-        return source;
     }
 }

@@ -4,7 +4,6 @@ import entities.ToolEntity;
 import entities.UserEntity;
 import entities.enums.MovementType;
 import entities.enums.ToolStatus;
-import entities.enums.UserRole;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import repositories.ToolRepository;
@@ -48,10 +47,7 @@ public class ToolService {
     @Transactional
     public ToolEntity decommissionTool(Long id, UserEntity user) {
         ToolEntity tool = getToolById(id);
-
-        if (user.getRole() != UserRole.ADMIN) {
-            throw new SecurityException("Only admins can decommission tools");
-        }
+        
         if (tool.getStatus() == ToolStatus.LOANED || tool.getStatus() == ToolStatus.REPAIRING) {
             throw new IllegalStateException("Cannot decommission a tool while loaned or under repair");
         }

@@ -12,31 +12,34 @@ import app.utils.SecurityUtils;
 
 import java.util.List;
 
-@CrossOrigin(origins = "http://localhost:5173")
 @RestController
 @RequestMapping("/loans")
+@CrossOrigin("*")
 public class LoanController {
 
     private final LoanService loanService;
+    private final SecurityUtils securityUtils; // PASO 1: Declarar la dependencia
 
-    public LoanController(LoanService loanService) {
+    // PASO 2: Inyectar ambas dependencias en el constructor
+    public LoanController(LoanService loanService, SecurityUtils securityUtils) { 
         this.loanService = loanService;
+        this.securityUtils = securityUtils;
     }
 
     // ==== versión JSON (para frontend) ====
     @PostMapping(consumes = "application/json", produces = "application/json")
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     public LoanEntity createLoanJson(@RequestBody @Valid LoanRequest req, Authentication authentication) {
-        // Obteniendo el usuario real del JWT
-        var currentUser = SecurityUtils.getUserFromAuthentication(authentication); 
+        // PASO 3: Llamar al método a través de la instancia inyectada
+        var currentUser = securityUtils.getUserFromAuthentication(authentication); 
         return loanService.createLoan(req.clientId(), req.toolId(), req.startDate(), req.dueDate(), currentUser);
     }
 
     @PutMapping(path = "/{id}/return", consumes = "application/json", produces = "application/json")
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     public LoanEntity returnLoanJson(@PathVariable Long id, @RequestBody @Valid ReturnLoanRequest req, Authentication authentication) {
-        // Obteniendo el usuario real del JWT
-        var currentUser = SecurityUtils.getUserFromAuthentication(authentication);
+        // PASO 3: Llamar al método a través de la instancia inyectada
+        var currentUser = securityUtils.getUserFromAuthentication(authentication);
         return loanService.returnLoan(
             id,
             req.toolId(),
@@ -54,8 +57,8 @@ public class LoanController {
                                  @RequestParam Long toolId,
                                  @RequestParam String dueDate,
                                  Authentication authentication) {
-        // Obteniendo el usuario real del JWT
-        var currentUser = SecurityUtils.getUserFromAuthentication(authentication);
+        // PASO 3: Llamar al método a través de la instancia inyectada
+        var currentUser = securityUtils.getUserFromAuthentication(authentication);
         return loanService.createLoan(clientId, toolId, java.time.LocalDate.parse(dueDate), currentUser);
     }
 
@@ -66,8 +69,8 @@ public class LoanController {
                                  @RequestParam boolean damaged,
                                  @RequestParam boolean irreparable,
                                  Authentication authentication) {
-        // Obteniendo el usuario real del JWT
-        var currentUser = SecurityUtils.getUserFromAuthentication(authentication);
+        // PASO 3: Llamar al método a través de la instancia inyectada
+        var currentUser = securityUtils.getUserFromAuthentication(authentication);
         return loanService.returnLoan(id, toolId, damaged, irreparable, currentUser);
     }
 

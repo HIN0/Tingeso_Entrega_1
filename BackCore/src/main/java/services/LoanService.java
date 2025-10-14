@@ -25,18 +25,21 @@ public class LoanService {
     private final ToolRepository toolRepository;
     private final ToolService toolService;
     private final TariffService tariffService;
+    private final ClientService clientService; // CAMBIO: Inyectar ClientService
 
     public LoanService(LoanRepository loanRepository,
                        ClientRepository clientRepository,
                        ToolRepository toolRepository,
                        ToolService toolService,
                        KardexService kardexService,
-                       TariffService tariffService) {
+                       TariffService tariffService,
+                       ClientService clientService) { // CAMBIO: Constructor con ClientService
         this.loanRepository = loanRepository;
         this.clientRepository = clientRepository;
         this.toolRepository = toolRepository;
         this.toolService = toolService;
         this.tariffService = tariffService;
+        this.clientService = clientService; // CAMBIO: Asignar ClientService
     }
 
     // Versión antigua (por compatibilidad con @RequestParam): usa startDate=Hoy
@@ -157,7 +160,14 @@ public class LoanService {
         loan.setStatus(LoanStatus.CLOSED);
         loan.setTotalPenalty(totalPenalty);
 
-        return loanRepository.save(loan);
+        LoanEntity savedLoan = loanRepository.save(loan);
+        
+        // CORRECCIÓN RN: Si hay penalización, restringir al cliente.
+        if (totalPenalty > 0.0) {
+            clientService.updateStatus(loan.getClient().getId(), ClientStatus.RESTRICTED);
+        }
+
+        return savedLoan;
     }
 
     @Transactional(readOnly = true)
