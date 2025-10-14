@@ -7,6 +7,7 @@ function ToolList() {
   const [tools, setTools] = useState([]);
   const { keycloak } = useKeycloak();
   const isAuth = !!keycloak?.authenticated;
+  // Comprobación de rol
   const isAdmin = isAuth && keycloak.hasRealmRole("ADMIN");
 
   const loadTools = () => {
@@ -36,6 +37,7 @@ function ToolList() {
           <li key={tool.id}>
             {tool.name} | {tool.category} | {tool.status} | ${tool.replacementValue}
             {" "}
+            {/* Botón solo visible para ADMIN y si no está dada de baja */}
             {isAdmin && tool.status !== "DECOMMISSIONED" && (
               <button onClick={() => handleDecommission(tool.id)}>
                 Decommission

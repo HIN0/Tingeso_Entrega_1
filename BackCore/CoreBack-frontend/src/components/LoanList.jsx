@@ -8,6 +8,7 @@ function LoanList() {
   const { keycloak } = useKeycloak();
   const isAuth = !!keycloak?.authenticated;
   const isAdmin = isAuth && keycloak.hasRealmRole("ADMIN");
+  // Uso el rol 'USER' como alias para 'Employee' (según SecurityConfig)
   const isUser = isAuth && keycloak.hasRealmRole("USER");
 
   const loadLoans = () => {
@@ -29,6 +30,7 @@ function LoanList() {
           <li key={loan.id}>
             Client: {loan.client?.name} | Tool: {loan.tool?.name} | 
             Start: {loan.startDate} | Due: {loan.dueDate} | Status: {loan.status}{" "}
+            {/* Botón solo visible para ADMIN */}
             {isAdmin && loan.status === "ACTIVE" && (
               <Link to={`/loans/return/${loan.id}`}>Return</Link>
             )}

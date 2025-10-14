@@ -3,7 +3,10 @@ package controllers;
 import entities.ToolEntity;
 import entities.UserEntity;
 import services.ToolService;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import app.utils.SecurityUtils; // Nueva importación
 
 import java.util.List;
 
@@ -29,16 +32,18 @@ public class ToolController {
     }
 
     @PostMapping
-    public ToolEntity createTool(@RequestBody ToolEntity tool) {
-        // Simulamos un usuario admin hasta tener seguridad real
-        UserEntity fakeUser = UserEntity.builder().id(1L).username("admin").build();
-        return toolService.createTool(tool, fakeUser);
+    @PreAuthorize("hasRole('ADMIN')") // Solo ADMIN puede crear
+    public ToolEntity createTool(@RequestBody ToolEntity tool, Authentication authentication) {
+        // Obteniendo el usuario real del JWT
+        UserEntity currentUser = SecurityUtils.getUserFromAuthentication(authentication);
+        return toolService.createTool(tool, currentUser);
     }
 
     @PutMapping("/{id}/decommission")
-    public ToolEntity decommissionTool(@PathVariable Long id) {
-        // Simulamos un usuario admin hasta tener seguridad real
-        UserEntity fakeUser = UserEntity.builder().id(1L).username("admin").build();
-        return toolService.decommissionTool(id, fakeUser);
+    @PreAuthorize("hasRole('ADMIN')") // Solo ADMIN puede dar de baja
+    public ToolEntity decommissionTool(@PathVariable Long id, Authentication authentication) {
+        // Obteniendo el usuario real del JWT
+        UserEntity currentUser = SecurityUtils.getUserFromAuthentication(authentication);
+        return toolService.decommissionTool(id, currentUser);
     }
 }
