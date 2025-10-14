@@ -10,6 +10,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/clients")
+@CrossOrigin("*")
 public class ClientController {
 
     private final ClientService clientService;

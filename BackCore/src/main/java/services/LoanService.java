@@ -164,6 +164,7 @@ public class LoanService {
         
         // CORRECCIÓN RN: Si hay penalización, restringir al cliente.
         if (totalPenalty > 0.0) {
+            // Utilizar ClientService para actualizar estado
             clientService.updateStatus(loan.getClient().getId(), ClientStatus.RESTRICTED);
         }
 

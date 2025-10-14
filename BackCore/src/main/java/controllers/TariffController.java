@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/tariffs")
+@CrossOrigin("*")
 public class TariffController {
 
     private final TariffService tariffService;

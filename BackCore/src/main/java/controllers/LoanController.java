@@ -3,6 +3,7 @@ package controllers;
 import dtos.LoanRequest;
 import dtos.ReturnLoanRequest;
 import entities.LoanEntity;
+import entities.UserEntity; // Asegúrate de tener esta importación
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
@@ -14,32 +15,39 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/loans")
-@CrossOrigin("*")
+@CrossOrigin("*") // Usando el comodín para resolver CORS
 public class LoanController {
 
     private final LoanService loanService;
-    private final SecurityUtils securityUtils; // PASO 1: Declarar la dependencia
+    private final SecurityUtils securityUtils; 
 
-    // PASO 2: Inyectar ambas dependencias en el constructor
+    // Constructor con inyección de SecurityUtils (para evitar errores al inicio)
     public LoanController(LoanService loanService, SecurityUtils securityUtils) { 
         this.loanService = loanService;
         this.securityUtils = securityUtils;
+    }
+
+    // **********************************************
+    // MÉTODO AÑADIDO: GET para la ruta base /loans
+    // **********************************************
+    @GetMapping // Mapea a GET /loans
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')") 
+    public List<LoanEntity> getAllLoans() {
+        return loanService.getActiveLoans();
     }
 
     // ==== versión JSON (para frontend) ====
     @PostMapping(consumes = "application/json", produces = "application/json")
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     public LoanEntity createLoanJson(@RequestBody @Valid LoanRequest req, Authentication authentication) {
-        // PASO 3: Llamar al método a través de la instancia inyectada
-        var currentUser = securityUtils.getUserFromAuthentication(authentication); 
+        UserEntity currentUser = securityUtils.getUserFromAuthentication(authentication); 
         return loanService.createLoan(req.clientId(), req.toolId(), req.startDate(), req.dueDate(), currentUser);
     }
 
     @PutMapping(path = "/{id}/return", consumes = "application/json", produces = "application/json")
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     public LoanEntity returnLoanJson(@PathVariable Long id, @RequestBody @Valid ReturnLoanRequest req, Authentication authentication) {
-        // PASO 3: Llamar al método a través de la instancia inyectada
-        var currentUser = securityUtils.getUserFromAuthentication(authentication);
+        UserEntity currentUser = securityUtils.getUserFromAuthentication(authentication);
         return loanService.returnLoan(
             id,
             req.toolId(),
@@ -57,8 +65,7 @@ public class LoanController {
                                  @RequestParam Long toolId,
                                  @RequestParam String dueDate,
                                  Authentication authentication) {
-        // PASO 3: Llamar al método a través de la instancia inyectada
-        var currentUser = securityUtils.getUserFromAuthentication(authentication);
+        UserEntity currentUser = securityUtils.getUserFromAuthentication(authentication);
         return loanService.createLoan(clientId, toolId, java.time.LocalDate.parse(dueDate), currentUser);
     }
 
@@ -69,12 +76,11 @@ public class LoanController {
                                  @RequestParam boolean damaged,
                                  @RequestParam boolean irreparable,
                                  Authentication authentication) {
-        // PASO 3: Llamar al método a través de la instancia inyectada
-        var currentUser = securityUtils.getUserFromAuthentication(authentication);
+        UserEntity currentUser = securityUtils.getUserFromAuthentication(authentication);
         return loanService.returnLoan(id, toolId, damaged, irreparable, currentUser);
     }
 
-    @GetMapping("/active")
+    @GetMapping("/active") // Esta ruta ahora es redundante, pero se mantiene sin conflicto
     public List<LoanEntity> getActiveLoans() {
         return loanService.getActiveLoans();
     }

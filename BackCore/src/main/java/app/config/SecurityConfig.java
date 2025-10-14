@@ -20,28 +20,33 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
-        // Converter para mapear realm roles -> ROLE_*
         JwtAuthenticationConverter jwtAuthConverter = new JwtAuthenticationConverter();
         jwtAuthConverter.setJwtGrantedAuthoritiesConverter(new KeycloakRealmRoleConverter());
 
         http
             .csrf(AbstractHttpConfigurer::disable)
-            // SOLUCIÓN CORS: Deshabilitamos el filtro CORS de Security, confiando en @CrossOrigin
             .cors(AbstractHttpConfigurer::disable) 
-            
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 
-                // CRÍTICO: Permitir OPTIONS para todas las rutas.
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() 
                 
-                // Reglas de Autorización (RBAC)
-                .requestMatchers("/tools/**").hasRole("ADMIN")
+                // CORRECCIÓN CLAVE: Permite a USER y ADMIN leer las herramientas (GET)
+                .requestMatchers(HttpMethod.GET, "/tools/**").hasAnyRole("ADMIN", "USER")
+                .requestMatchers(HttpMethod.GET, "/loans/**").hasAnyRole("ADMIN", "USER") 
+                
+                // Las demás operaciones de /tools (POST/PUT/DELETE) siguen siendo solo para ADMIN
+                .requestMatchers("/tools/**").hasRole("ADMIN") 
+
+                // Rutas que requieren solo ADMIN
                 .requestMatchers("/tariffs/**").hasRole("ADMIN")
                 .requestMatchers("/clients/**").hasRole("ADMIN") 
+                
+                // Rutas que requieren ADMIN o USER (Préstamos/Reportes)
                 .requestMatchers("/kardex/**").hasAnyRole("ADMIN", "USER")
                 .requestMatchers("/loans/**", "/returns/**").hasAnyRole("ADMIN", "USER")
                 .requestMatchers("/reports/**").hasAnyRole("ADMIN", "USER")
+                
                 .anyRequest().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2
