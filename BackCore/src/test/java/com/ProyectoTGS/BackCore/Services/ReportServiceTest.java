@@ -1,0 +1,146 @@
+package com.ProyectoTGS.BackCore.Services;
+
+import entities.ClientEntity;
+import entities.LoanEntity;
+import entities.ToolEntity;
+import entities.enums.ClientStatus;
+import entities.enums.LoanStatus;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import repositories.ClientRepository;
+import repositories.LoanRepository;
+import repositories.ToolRepository;
+import services.ReportService;
+
+import java.time.LocalDate;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+public class ReportServiceTest {
+
+    @Mock
+    private LoanRepository loanRepository;
+    @Mock
+    private ClientRepository clientRepository;
+    @Mock
+    private ToolRepository toolRepository; 
+
+    @InjectMocks
+    private ReportService reportService;
+
+    private ClientEntity client1;
+    private ClientEntity client2;
+    private ToolEntity toolA;
+    private ToolEntity toolB;
+
+    @BeforeEach
+    void setUp() {
+        client1 = ClientEntity.builder().id(1L).name("Client A").build();
+        client2 = ClientEntity.builder().id(2L).name("Client B").build();
+        toolA = ToolEntity.builder().id(10L).name("Hammer").build();
+        toolB = ToolEntity.builder().id(20L).name("Drill").build();
+
+        // Inyectamos el servicio, incluyendo el mock de ToolRepository
+        reportService = new ReportService(loanRepository, clientRepository, toolRepository);
+    }
+
+    // =======================================================================
+    // ÉPICA 6: REPORTES POR ESTADO (getLoansByStatus)
+    // =======================================================================
+
+    @Test
+    void getLoansByStatus_Active() {
+        // ARRANGE
+        LoanEntity activeLoan = LoanEntity.builder().status(LoanStatus.ACTIVE).build();
+        when(loanRepository.findByStatus(LoanStatus.ACTIVE)).thenReturn(List.of(activeLoan));
+
+        // ACT
+        List<LoanEntity> result = reportService.getLoansByStatus("ACTIVE");
+
+        // ASSERT
+        assertEquals(1, result.size());
+        assertEquals(LoanStatus.ACTIVE, result.get(0).getStatus());
+    }
+    
+    @Test
+    void getLoansByStatus_ThrowsExceptionForInvalidStatus() {
+        // ACT & ASSERT
+        assertThrows(IllegalArgumentException.class, () -> {
+            reportService.getLoansByStatus("INVALID");
+        });
+    }
+
+    // =======================================================================
+    // ÉPICA 6: CLIENTES CON PRÉSTAMOS ATRASADOS (getClientsWithLateLoans)
+    // =======================================================================
+
+    @Test
+    void getClientsWithLateLoans_ReturnsUniqueClients() {
+        // ARRANGE: Cliente 1 tiene dos préstamos LATE, Cliente 2 tiene uno
+        LoanEntity late1 = LoanEntity.builder().client(client1).status(LoanStatus.LATE).build();
+        LoanEntity late2 = LoanEntity.builder().client(client1).status(LoanStatus.LATE).build();
+        LoanEntity late3 = LoanEntity.builder().client(client2).status(LoanStatus.LATE).build();
+
+        when(loanRepository.findByStatus(LoanStatus.LATE)).thenReturn(List.of(late1, late2, late3));
+
+        // ACT
+        List<ClientEntity> result = reportService.getClientsWithLateLoans();
+
+        // ASSERT: Debe devolver 2 clientes únicos
+        assertEquals(2, result.size());
+        assertTrue(result.contains(client1));
+        assertTrue(result.contains(client2));
+    }
+
+    // =======================================================================
+    // ÉPICA 6: RANKING DE HERRAMIENTAS MÁS PRESTADAS (getTopTools)
+    // =======================================================================
+
+    @Test
+    void getTopTools_ReturnsRankingFromRepository() {
+        // ARRANGE: Simular el resultado de la consulta SQL (ToolEntity, Count)
+        LocalDate start = LocalDate.of(2025, 1, 1);
+        LocalDate end = LocalDate.of(2025, 1, 31);
+        
+        List<Object[]> mockRanking = List.of(
+            new Object[]{toolA, 5L}, // 5 veces prestada
+            new Object[]{toolB, 3L}  // 3 veces prestada
+        );
+
+        when(loanRepository.findTopToolsByDateRange(start, end)).thenReturn(mockRanking);
+
+        // ACT
+        List<Object[]> result = reportService.getTopTools(start, end);
+
+        // ASSERT
+        assertEquals(2, result.size());
+        assertEquals(toolA, result.get(0)[0]);
+        assertEquals(5L, result.get(0)[1]);
+        verify(loanRepository, times(1)).findTopToolsByDateRange(start, end);
+    }
+    
+    // =======================================================================
+    // CLIENTES RESTRINGIDOS
+    // =======================================================================
+    
+    @Test
+    void getRestrictedClients_Success() {
+        // ARRANGE
+        ClientEntity restricted1 = ClientEntity.builder().status(ClientStatus.RESTRICTED).build();
+        when(clientRepository.findByStatus(ClientStatus.RESTRICTED)).thenReturn(List.of(restricted1));
+
+        // ACT
+        List<ClientEntity> result = reportService.getRestrictedClients();
+
+        // ASSERT
+        assertEquals(1, result.size());
+        assertEquals(ClientStatus.RESTRICTED, result.get(0).getStatus());
+    }
+}

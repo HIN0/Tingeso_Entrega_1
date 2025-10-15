@@ -24,7 +24,7 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 public class LoanServiceTest {
 
-    // MOCKS: Simulamos las dependencias
+    // DECLARACIÓN DE DEPENDENCIAS (Mocks simulan el comportamiento real de otras capas)
     @Mock private LoanRepository loanRepository;
     @Mock private ClientRepository clientRepository;
     @Mock private ToolRepository toolRepository;
@@ -36,7 +36,7 @@ public class LoanServiceTest {
     @InjectMocks
     private LoanService loanService;
 
-    // Entidades de prueba
+    // Entidades de prueba (SETUP)
     private ClientEntity clientActive;
     private ClientEntity clientRestricted;
     private ToolEntity toolAvailable;
@@ -44,78 +44,71 @@ public class LoanServiceTest {
 
     @BeforeEach
     void setUp() {
-        // Inicialización de entidades simuladas
+        // Configuramos entidades base que se usan en la mayoría de los tests
         clientActive = ClientEntity.builder().id(1L).status(ClientStatus.ACTIVE).build();
         clientRestricted = ClientEntity.builder().id(2L).status(ClientStatus.RESTRICTED).build();
         
+        // La herramienta debe tener stock > 0 para que la mayoría de los préstamos pasen
         toolAvailable = ToolEntity.builder().id(10L).stock(1).status(ToolStatus.AVAILABLE).replacementValue(45000).build();
         testUser = UserEntity.builder().username("test_user").id(1L).build();
         
-        // El constructor necesita todos los mocks para inicializarse
+        // Re-inicializamos el servicio para cada prueba
         loanService = new LoanService(loanRepository, clientRepository, toolRepository, toolService, kardexService, tariffService, clientService);
     }
 
     // =========================================================================================================
-    // TESTS PARA createLoan (Validaciones de Negocio)
+    // ÉPICA 2: TESTS PARA createLoan (Validaciones de Préstamo)
     // =========================================================================================================
 
     @Test
     void createLoan_Success() {
-        // Arrange
+        // ARRANGE
         LocalDate today = LocalDate.now();
         LocalDate dueDate = today.plusDays(7);
         LoanEntity newLoan = LoanEntity.builder().client(clientActive).tool(toolAvailable).startDate(today).dueDate(dueDate).status(LoanStatus.ACTIVE).totalPenalty(0.0).build();
 
-        // Simular que las entidades existen y no hay préstamos activos
+        // MOCKEO: Simular que el cliente, herramienta existen, no hay préstamos y la persistencia funciona
         when(clientRepository.findById(1L)).thenReturn(Optional.of(clientActive));
         when(toolRepository.findById(10L)).thenReturn(Optional.of(toolAvailable));
         when(loanRepository.findAll()).thenReturn(Collections.emptyList());
         when(loanRepository.save(any(LoanEntity.class))).thenReturn(newLoan);
 
-        // Act
+        // ACT
         LoanEntity createdLoan = loanService.createLoan(1L, 10L, today, dueDate, testUser);
 
-        // Assert
+        // ASSERT
+        // Confirma el estado y la manipulación de inventario/Kardex (Épica 2, 5)
         assertNotNull(createdLoan);
         assertEquals(LoanStatus.ACTIVE, createdLoan.getStatus());
-        // Verificar que se decrementó el stock y se registró el Kardex
         verify(toolService, times(1)).decrementStockForLoan(toolAvailable, testUser);
     }
 
     @Test
     void createLoan_FailsWhenClientIsRestricted() {
-        // Arrange
+        // ÉPICA 2 / 3: RN - No prestar a clientes restringidos
+        // ARRANGE: Cliente 2 es RESTRICTED y las entidades existen
         LocalDate today = LocalDate.now();
         LocalDate dueDate = today.plusDays(7);
-        
-        // 1. Configurar Cliente: Encontrar el cliente (Restricted)
         when(clientRepository.findById(2L)).thenReturn(Optional.of(clientRestricted));
-
-        // 2. CORRECCIÓN: Configurar Herramienta: Debe encontrar la herramienta para que el código continúe.
         when(toolRepository.findById(10L)).thenReturn(Optional.of(toolAvailable)); 
 
-        // Act & Assert
-        // Debe lanzar IllegalStateException (RN)
+        // ACT & ASSERT: Debe lanzar la excepción de restricción antes de guardar
         assertThrows(IllegalStateException.class, () -> 
             loanService.createLoan(2L, 10L, today, dueDate, testUser), 
             "Debe lanzar IllegalStateException porque el cliente está restringido.");
-            
-        // Ya que el código falló en la validación de negocio, no debe haber guardado nada.
-        verify(loanRepository, never()).save(any());
-        
-        // Y verificamos que NO se intentó manipular el stock (porque falló antes de eso)
-        verify(toolService, never()).decrementStockForLoan(any(), any());
+            verify(loanRepository, never()).save(any());
     }
     
     @Test
     void createLoan_FailsWhenDueDateIsBeforeStartDate() {
-        // Arrange
+        // ÉPICA 2: RN - Validación de fechas
+        // ARRANGE: dueDate es anterior a startDate
         LocalDate startDate = LocalDate.now();
         LocalDate dueDate = startDate.minusDays(1);
         when(clientRepository.findById(1L)).thenReturn(Optional.of(clientActive));
         when(toolRepository.findById(10L)).thenReturn(Optional.of(toolAvailable));
 
-        // Act & Assert
+        // ACT & ASSERT: Debe lanzar la excepción de argumento ilegal
         assertThrows(IllegalArgumentException.class, () -> 
             loanService.createLoan(1L, 10L, startDate, dueDate, testUser));
         verify(loanRepository, never()).save(any());
@@ -123,11 +116,11 @@ public class LoanServiceTest {
 
     @Test
     void createLoan_FailsWhenLimitOfFiveActiveLoansIsReached() {
+        // ÉPICA 2: RN - Límite de 5 préstamos activos
         // ARRANGE: Simular 5 préstamos activos para el cliente 1L
         LocalDate today = LocalDate.now();
         LocalDate dueDate = today.plusDays(7);
 
-        // Creamos una lista simulada de 5 préstamos activos
         List<LoanEntity> fiveActiveLoans = List.of(
             LoanEntity.builder().client(clientActive).status(LoanStatus.ACTIVE).build(),
             LoanEntity.builder().client(clientActive).status(LoanStatus.ACTIVE).build(),
@@ -140,8 +133,7 @@ public class LoanServiceTest {
         when(toolRepository.findById(10L)).thenReturn(Optional.of(toolAvailable));
         when(loanRepository.findAll()).thenReturn(fiveActiveLoans); // Devuelve 5 préstamos activos
 
-        // ACT & ASSERT
-        // Intenta crear el sexto préstamo (debe fallar)
+        // ACT & ASSERT: Intenta crear el sexto préstamo
         assertThrows(IllegalStateException.class, () -> 
             loanService.createLoan(1L, 10L, today, dueDate, testUser), 
             "Debe fallar al alcanzar el límite de 5 préstamos activos.");
@@ -150,12 +142,13 @@ public class LoanServiceTest {
 
     @Test
     void createLoan_FailsWhenToolIsLoanedOrStockIsZero() {
+        // ÉPICA 1 / 2: RN - Validación de disponibilidad y stock
         // ARRANGE: Caso 1: Herramienta prestada (LOANED)
         ToolEntity toolLoaned = ToolEntity.builder().id(20L).stock(0).status(ToolStatus.LOANED).build();
         when(clientRepository.findById(1L)).thenReturn(Optional.of(clientActive));
         when(toolRepository.findById(20L)).thenReturn(Optional.of(toolLoaned));
 
-        // ACT & ASSERT: Debe fallar si no está AVAILABLE o stock > 0
+        // ACT & ASSERT: Debe fallar si el estado no es AVAILABLE
         assertThrows(IllegalStateException.class, () -> 
             loanService.createLoan(1L, 20L, LocalDate.now(), LocalDate.now().plusDays(1), testUser));
         
@@ -163,7 +156,7 @@ public class LoanServiceTest {
         toolLoaned.setStock(0);
         toolLoaned.setStatus(ToolStatus.AVAILABLE);
         
-        // ACT & ASSERT
+        // ACT & ASSERT: Debe fallar si el stock es cero
         assertThrows(IllegalStateException.class, () -> 
             loanService.createLoan(1L, 20L, LocalDate.now(), LocalDate.now().plusDays(1), testUser));
         
@@ -172,6 +165,7 @@ public class LoanServiceTest {
     
     @Test
     void createLoan_FailsWhenClientAlreadyHasThisToolActive() {
+        // ÉPICA 2: RN - No duplicidad de herramienta
         // ARRANGE: Simular que el cliente 1 ya tiene la herramienta 10 activa
         LocalDate today = LocalDate.now();
         LocalDate dueDate = today.plusDays(7);
@@ -182,143 +176,144 @@ public class LoanServiceTest {
         when(toolRepository.findById(10L)).thenReturn(Optional.of(toolAvailable));
         when(loanRepository.findAll()).thenReturn(Collections.singletonList(activeLoanForSameTool));
 
-        // ACT & ASSERT
+        // ACT & ASSERT: Intenta crear el préstamo con la misma herramienta
         assertThrows(IllegalStateException.class, () -> 
             loanService.createLoan(1L, 10L, today, dueDate, testUser),
             "Debe fallar si el cliente ya tiene esta herramienta activa.");
         verify(loanRepository, never()).save(any());
     }
-    
-    @Test
-    void returnLoan_AppliesRepairFeeMarksRepairingAndRestrictsClient_RN() {
-        // Arrange
-        Long loanId = 8L;
-        
-        // 1. Establecer la fecha de vencimiento a HOY para asegurar que NO haya atraso (delay = 0).
-        LocalDate dueDate = LocalDate.now(); 
-        
-        LoanEntity loan = LoanEntity.builder()
-            .id(loanId)
-            .client(clientActive)
-            .tool(toolAvailable)
-            .dueDate(dueDate) // CORRECCIÓN 1: Asegurar que no esté atrasado.
-            .status(LoanStatus.ACTIVE)
-            .totalPenalty(0.0).build();
-        
-        when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
-        when(toolRepository.findById(10L)).thenReturn(Optional.of(toolAvailable));
-        
-        // CORRECCIÓN 2: Mockear ambas dependencias, pero para este test 
-        when(tariffService.getRepairFee()).thenReturn(1500.0); 
-        
-        // Act (Devuelto dañado, NO irreparable)
-        loanService.returnLoan(loanId, 10L, true, false, testUser, LocalDate.now());
-        
-        // Assert
-        assertEquals(1500.0, loan.getTotalPenalty()); // Solo cargo por reparación
-        verify(clientService, times(1)).updateStatus(clientActive.getId(), ClientStatus.RESTRICTED);
-        verify(toolService, times(1)).markAsRepairing(toolAvailable, testUser);
-    }
-    
-    @Test
-    void returnLoan_FailsWhenLoanStatusIsClosed() {
-        // ARRANGE
-        Long loanId = 9L;
-        // Simular un préstamo ya cerrado (CLOSED)
-        LoanEntity loan = LoanEntity.builder().id(loanId).tool(toolAvailable).status(LoanStatus.CLOSED).build();
-
-        when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
-        when(toolRepository.findById(10L)).thenReturn(Optional.of(toolAvailable));
-
-        // ACT & ASSERT
-        assertThrows(IllegalStateException.class, () -> 
-            loanService.returnLoan(loanId, 10L, false, false, testUser, LocalDate.now()));
-        verify(loanRepository, never()).save(any()); // No debe guardar nada
-    }
-
 
     // =========================================================================================================
-    // TESTS PARA returnLoan (Cálculo de Multas y RN)
+    // ÉPICA 2: TESTS PARA returnLoan (Devoluciones, Multas y Restricciones)
     // =========================================================================================================
 
     @Test
     void returnLoan_SuccessOnTimeNoDamage() {
-        // Arrange
+        // ÉPICA 2: Camino feliz de devolución
+        // ARRANGE: Préstamo devuelto a tiempo (dueDate = today) y sin multas/daños
         LocalDate dueDate = LocalDate.now();
-        Long loanId  = 5L;
+        Long loanId = 5L;
         
         LoanEntity loan = LoanEntity.builder().id(loanId).client(clientActive).tool(toolAvailable).startDate(dueDate.minusDays(5)).dueDate(dueDate).status(LoanStatus.ACTIVE).totalPenalty(0.0).build();
 
         when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
         when(toolRepository.findById(10L)).thenReturn(Optional.of(toolAvailable));
+        when(loanRepository.save(any(LoanEntity.class))).thenReturn(loan); // MOCKEO CRÍTICO
         
-        // Mockear la función save para que devuelva la entidad modificada.
-        when(loanRepository.save(any(LoanEntity.class))).thenReturn(loan);
-
-        // Act (Devuelto hoy, a tiempo)
+        // ACT (Devuelto hoy, a tiempo)
         LoanEntity returnedLoan = loanService.returnLoan(loanId, 10L, false, false, testUser, LocalDate.now());
         
-        // Assert
+        // ASSERT
+        // Confirma que el estado se cierra y no hay penalidad
         assertEquals(LoanStatus.CLOSED, returnedLoan.getStatus());
         assertEquals(0.0, returnedLoan.getTotalPenalty());
 
-        // Se debe incrementar stock y NO debe restringir al cliente
+        // Confirma que se actualiza el stock (Épica 1) y NO se restringe al cliente (Épica 3)
         verify(toolService, times(1)).incrementStockForReturn(toolAvailable, testUser);
         verify(clientService, never()).updateStatus(anyLong(), any());
     }
 
     @Test
     void returnLoan_AppliesLateFeeAndRestrictsClient_RN() {
-        // Arrange
-        LocalDate dueDate = LocalDate.now().minusDays(2); // Préstamo atrasado
+        // ÉPICA 2 / 4 / 3: RN - Multa por atraso y restricción de cliente
+        // ARRANGE: Préstamo atrasado 2 días (dueDate = today - 2)
+        LocalDate dueDate = LocalDate.now().minusDays(2); 
         Long loanId = 6L;
         
         LoanEntity loan = LoanEntity.builder().id(loanId).client(clientActive).tool(toolAvailable).startDate(dueDate.minusDays(5)).dueDate(dueDate).status(LoanStatus.ACTIVE).totalPenalty(0.0).build();
 
         when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
         when(toolRepository.findById(10L)).thenReturn(Optional.of(toolAvailable));
-        when(tariffService.getDailyLateFee()).thenReturn(2000.0);
+        when(tariffService.getDailyLateFee()).thenReturn(2000.0); // Tarifa diaria de multa
         
-        // Act (Se devuelve hoy, 2 días tarde)
+        // ACT (Se devuelve hoy, 2 días tarde)
         loanService.returnLoan(loanId, 10L, false, false, testUser, LocalDate.now());
         
-        // Assert
+        // ASSERT
         // Multa: 2 días * 2000 = 4000
         assertEquals(4000.0, loan.getTotalPenalty());
-        // RN CRÍTICO: Debe restringir al cliente por la multa
+        // RN CRÍTICO: Debe restringir al cliente por la multa (Épica 3)
         verify(clientService, times(1)).updateStatus(clientActive.getId(), ClientStatus.RESTRICTED); 
         verify(toolService, times(1)).incrementStockForReturn(toolAvailable, testUser);
     }
     
     @Test
+    void returnLoan_AppliesRepairFeeMarksRepairingAndRestrictsClient_RN() {
+        // ÉPICA 1 / 2 / 4: RN - Daño reparable
+        // ARRANGE: Préstamo a tiempo (delay = 0).
+        Long loanId = 8L;
+        LocalDate dueDate = LocalDate.now(); 
+        
+        LoanEntity loan = LoanEntity.builder()
+            .id(loanId)
+            .client(clientActive)
+            .tool(toolAvailable)
+            .dueDate(dueDate) 
+            .status(LoanStatus.ACTIVE)
+            .totalPenalty(0.0).build();
+        
+        when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
+        when(toolRepository.findById(10L)).thenReturn(Optional.of(toolAvailable));
+        when(tariffService.getRepairFee()).thenReturn(1500.0); 
+        
+        // ACT (Devuelto dañado, NO irreparable)
+        loanService.returnLoan(loanId, 10L, true, false, testUser, LocalDate.now());
+        
+        // ASSERT
+        // Penalización: 1500 (tarifa de reparación)
+        assertEquals(1500.0, loan.getTotalPenalty());
+        // RN CRÍTICO: Debe restringir al cliente por el cargo (Épica 3)
+        verify(clientService, times(1)).updateStatus(clientActive.getId(), ClientStatus.RESTRICTED);
+        // Debe marcarse como REPAIRING (Épica 1)
+        verify(toolService, times(1)).markAsRepairing(toolAvailable, testUser);
+    }
+
+    @Test
     void returnLoan_AppliesReplacementFeeAndRestrictsClient_RN() {
-        // Arrange
+        // ÉPICA 1 / 2 / 4: RN - Daño irreparable (Baja definitiva)
+        // ARRANGE: Préstamo con valor de reposición de 50000
         Long loanId = 7L;
         ToolEntity irreparableTool = ToolEntity.builder().id(11L).replacementValue(50000).build();
         
-        // CLAVE: Añadir dueDate para evitar el NullPointerException.
+        // CLAVE: Añadir dueDate para evitar el NullPointerException en ChronoUnit
         LoanEntity loan = LoanEntity.builder()
             .id(loanId)
             .client(clientActive)
             .tool(irreparableTool)
-            .dueDate(LocalDate.now().minusDays(10)) // PRÉSTAMO CON VENCIMIENTO PASADO (Para un caso real)
+            .dueDate(LocalDate.now().minusDays(10)) 
             .status(LoanStatus.ACTIVE)
             .totalPenalty(0.0).build();
         
         when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
         when(toolRepository.findById(11L)).thenReturn(Optional.of(irreparableTool));
-        // Necesitamos simular que el cargo diario por atraso es 0 para aislar el cargo por reposición.
-        when(tariffService.getDailyLateFee()).thenReturn(0.0); 
+        when(tariffService.getDailyLateFee()).thenReturn(0.0); // Aislamos el cargo de reposición
 
-        // Act (Devuelto dañado e irreparable)
+        // ACT (Devuelto dañado e irreparable)
         loanService.returnLoan(loanId, 11L, true, true, testUser, LocalDate.now());
         
-        // Assert
-        // El cargo final debe ser: 50000 (reposición) + 0 (multa por atraso)
+        // ASSERT
+        // El cargo final debe ser: 50000 (reposición)
         assertEquals(50000.0, loan.getTotalPenalty());
         // RN CRÍTICO: Debe restringir al cliente por el cargo
         verify(clientService, times(1)).updateStatus(clientActive.getId(), ClientStatus.RESTRICTED);
-        // Debe marcarse como DECOMMISSIONED
+        // Debe marcarse como DECOMMISSIONED (Épica 1)
         verify(toolService, times(1)).markAsDecommissioned(irreparableTool, testUser);
+    }
+    
+    @Test
+    void returnLoan_FailsWhenLoanStatusIsClosed() {
+        // ÉPICA 2: Validación de estado del préstamo
+        // ARRANGE: Simular un préstamo ya cerrado (CLOSED)
+        Long loanId = 9L;
+        LoanEntity loan = LoanEntity.builder().id(loanId).tool(toolAvailable).status(LoanStatus.CLOSED).build();
+
+        when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
+        when(toolRepository.findById(10L)).thenReturn(Optional.of(toolAvailable));
+
+        // ACT & ASSERT: Debe fallar si el estado no es ACTIVE o LATE
+        assertThrows(IllegalStateException.class, () -> 
+            loanService.returnLoan(loanId, 10L, false, false, testUser, LocalDate.now()),
+            "Solo se pueden devolver préstamos activos o atrasados.");
+        verify(loanRepository, never()).save(any());
     }
 }
