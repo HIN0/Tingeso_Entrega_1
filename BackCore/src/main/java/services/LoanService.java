@@ -25,7 +25,7 @@ public class LoanService {
     private final ToolRepository toolRepository;
     private final ToolService toolService;
     private final TariffService tariffService;
-    private final ClientService clientService; // CAMBIO: Inyectar ClientService
+    private final ClientService clientService; // PASO 1: Inyectar ClientService
 
     public LoanService(LoanRepository loanRepository,
                        ClientRepository clientRepository,
@@ -33,13 +33,13 @@ public class LoanService {
                        ToolService toolService,
                        KardexService kardexService,
                        TariffService tariffService,
-                       ClientService clientService) { // CAMBIO: Constructor con ClientService
+                       ClientService clientService) { // PASO 2: Incluir en constructor
         this.loanRepository = loanRepository;
         this.clientRepository = clientRepository;
         this.toolRepository = toolRepository;
         this.toolService = toolService;
         this.tariffService = tariffService;
-        this.clientService = clientService; // CAMBIO: Asignar ClientService
+        this.clientService = clientService; // PASO 3: Asignación
     }
 
     // Versión antigua (por compatibilidad con @RequestParam): usa startDate=Hoy
@@ -162,9 +162,8 @@ public class LoanService {
 
         LoanEntity savedLoan = loanRepository.save(loan);
         
-        // CORRECCIÓN RN: Si hay penalización, restringir al cliente.
+        // CORRECCIÓN RN: Si hay penalización, restringir al cliente (Bloqueo por multas pendientes)
         if (totalPenalty > 0.0) {
-            // Utilizar ClientService para actualizar estado
             clientService.updateStatus(loan.getClient().getId(), ClientStatus.RESTRICTED);
         }
 

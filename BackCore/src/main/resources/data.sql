@@ -2,8 +2,8 @@
 -- USERS (Épica 7)
 -- ======================
 INSERT INTO users (username, password, role) VALUES 
-('admin', 'admin123', 'ADMIN'),
-('employee', 'emp123', 'EMPLOYEE');
+('diego', 'diego123', 'ADMIN'),
+('juan', 'juan123', 'EMPLOYEE');
 
 -- ======================
 -- TARIFF (Épica 4)
