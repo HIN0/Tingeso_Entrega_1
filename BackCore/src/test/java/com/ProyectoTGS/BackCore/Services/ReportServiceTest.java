@@ -29,7 +29,7 @@ public class ReportServiceTest {
     private LoanRepository loanRepository;
     @Mock
     private ClientRepository clientRepository;
-    @Mock
+    @Mock 
     private ToolRepository toolRepository; 
 
     @InjectMocks
@@ -40,23 +40,24 @@ public class ReportServiceTest {
     private ToolEntity toolA;
     private ToolEntity toolB;
 
+
     @BeforeEach
     void setUp() {
-        client1 = ClientEntity.builder().id(1L).name("Client A").build();
-        client2 = ClientEntity.builder().id(2L).name("Client B").build();
-        toolA = ToolEntity.builder().id(10L).name("Hammer").build();
-        toolB = ToolEntity.builder().id(20L).name("Drill").build();
 
-        // Inyectamos el servicio, incluyendo el mock de ToolRepository
-        reportService = new ReportService(loanRepository, clientRepository, toolRepository);
+        // Inicializar entidades de prueba
+        client1 = ClientEntity.builder().id(1L).name("Cliente Juan").build();
+        client2 = ClientEntity.builder().id(2L).name("Cliente Maria").build();
+        toolA = ToolEntity.builder().id(10L).name("Martillo").build();
+        toolB = ToolEntity.builder().id(20L).name("Taladro").build();
+        
     }
 
     // =======================================================================
-    // ÉPICA 6: REPORTES POR ESTADO (getLoansByStatus)
+    // ÉPICA 6: RF 6.1 - PRÉSTAMOS POR ESTADO (getLoansByStatus)
     // =======================================================================
 
     @Test
-    void getLoansByStatus_Active() {
+    void getLoansByStatus_Active_Success() {
         // ARRANGE
         LoanEntity activeLoan = LoanEntity.builder().status(LoanStatus.ACTIVE).build();
         when(loanRepository.findByStatus(LoanStatus.ACTIVE)).thenReturn(List.of(activeLoan));
@@ -71,41 +72,41 @@ public class ReportServiceTest {
     
     @Test
     void getLoansByStatus_ThrowsExceptionForInvalidStatus() {
-        // ACT & ASSERT
+        // ACT & ASSERT: Debe fallar al intentar convertir un string inválido a LoanStatus
         assertThrows(IllegalArgumentException.class, () -> {
-            reportService.getLoansByStatus("INVALID");
-        });
+            reportService.getLoansByStatus("INVALID_STATUS");
+        }, "Debe lanzar excepción si el estado no existe en el Enum.");
     }
 
     // =======================================================================
-    // ÉPICA 6: CLIENTES CON PRÉSTAMOS ATRASADOS (getClientsWithLateLoans)
+    // ÉPICA 6: RF 6.2 - CLIENTES CON PRÉSTAMOS ATRASADOS (getClientsWithLateLoans)
     // =======================================================================
 
     @Test
     void getClientsWithLateLoans_ReturnsUniqueClients() {
         // ARRANGE: Cliente 1 tiene dos préstamos LATE, Cliente 2 tiene uno
-        LoanEntity late1 = LoanEntity.builder().client(client1).status(LoanStatus.LATE).build();
-        LoanEntity late2 = LoanEntity.builder().client(client1).status(LoanStatus.LATE).build();
-        LoanEntity late3 = LoanEntity.builder().client(client2).status(LoanStatus.LATE).build();
+        LoanEntity lateLoanForC1 = LoanEntity.builder().client(client1).status(LoanStatus.LATE).build();
+        LoanEntity anotherLateLoanForC1 = LoanEntity.builder().client(client1).status(LoanStatus.LATE).build();
+        LoanEntity lateLoanForC2 = LoanEntity.builder().client(client2).status(LoanStatus.LATE).build();
 
-        when(loanRepository.findByStatus(LoanStatus.LATE)).thenReturn(List.of(late1, late2, late3));
+        when(loanRepository.findByStatus(LoanStatus.LATE)).thenReturn(List.of(lateLoanForC1, anotherLateLoanForC1, lateLoanForC2));
 
         // ACT
         List<ClientEntity> result = reportService.getClientsWithLateLoans();
 
-        // ASSERT: Debe devolver 2 clientes únicos
+        // ASSERT: Debe devolver 2 clientes únicos (se usa .distinct())
         assertEquals(2, result.size());
-        assertTrue(result.contains(client1));
-        assertTrue(result.contains(client2));
+        assertTrue(result.stream().anyMatch(c -> c.getId().equals(1L)), "Debe contener al Cliente 1");
+        assertTrue(result.stream().anyMatch(c -> c.getId().equals(2L)), "Debe contener al Cliente 2");
     }
 
     // =======================================================================
-    // ÉPICA 6: RANKING DE HERRAMIENTAS MÁS PRESTADAS (getTopTools)
+    // ÉPICA 6: RF 6.3 - RANKING DE HERRAMIENTAS (getTopTools)
     // =======================================================================
 
     @Test
     void getTopTools_ReturnsRankingFromRepository() {
-        // ARRANGE: Simular el resultado de la consulta SQL (ToolEntity, Count)
+        // ARRANGE: Simular el resultado de la consulta SQL (Object[]: ToolEntity, Count)
         LocalDate start = LocalDate.of(2025, 1, 1);
         LocalDate end = LocalDate.of(2025, 1, 31);
         
@@ -121,20 +122,21 @@ public class ReportServiceTest {
 
         // ASSERT
         assertEquals(2, result.size());
+        // Verificar el orden y los datos
         assertEquals(toolA, result.get(0)[0]);
         assertEquals(5L, result.get(0)[1]);
         verify(loanRepository, times(1)).findTopToolsByDateRange(start, end);
     }
     
     // =======================================================================
-    // CLIENTES RESTRINGIDOS
+    // CLIENTES RESTRINGIDOS (getRestrictedClients)
     // =======================================================================
     
     @Test
     void getRestrictedClients_Success() {
         // ARRANGE
-        ClientEntity restricted1 = ClientEntity.builder().status(ClientStatus.RESTRICTED).build();
-        when(clientRepository.findByStatus(ClientStatus.RESTRICTED)).thenReturn(List.of(restricted1));
+        ClientEntity restrictedClient = ClientEntity.builder().status(ClientStatus.RESTRICTED).build();
+        when(clientRepository.findByStatus(ClientStatus.RESTRICTED)).thenReturn(List.of(restrictedClient));
 
         // ACT
         List<ClientEntity> result = reportService.getRestrictedClients();
