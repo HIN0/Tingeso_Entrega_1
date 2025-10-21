@@ -10,6 +10,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 import repositories.ToolRepository;
+// Importar las nuevas excepciones
+import app.exceptions.ResourceNotFoundException;
+import app.exceptions.InvalidOperationException;
+
 
 import java.util.List;
 
@@ -25,69 +29,69 @@ public class ToolService {
         this.kardexService = kardexService;
     }
 
+    // --- MÉTODOS DE CONSULTA ---
+
     public List<ToolEntity> getAllTools() {
         return toolRepository.findAll();
     }
 
     public ToolEntity getToolById(Long id) {
+        // CORRECCIÓN: Usar excepción personalizada
         return toolRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Tool not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("Tool not found with id: " + id));
     }
 
-    // ----- PARA CREAR HERRAMIENTAS -----
+    // --- MÉTODOS DE MODIFICACIÓN ---
+
     @Transactional
     public ToolEntity createTool(@Valid ToolEntity tool, UserEntity user) {
-        if (tool.getStock() == null || tool.getStock() < 0) {
-            throw new IllegalArgumentException("Initial stock must be provided and cannot be negative.");
-        }
 
+        // Asignación de estado inicial (si es null)
         if (tool.getStatus() == null) {
-            tool.setStatus(tool.getStock() > 0 ? ToolStatus.AVAILABLE : ToolStatus.AVAILABLE);
-
-        } else if (tool.getStock() == 0 && tool.getStatus() == ToolStatus.AVAILABLE) {
+            // Si stock > 0 -> AVAILABLE, si stock == 0 -> AVAILABLE (según @Min(0) para cargar datos iniciales pero eso frena con el frontend)
+            tool.setStatus(ToolStatus.AVAILABLE);
         } else if (tool.getStock() > 0 && tool.getStatus() != ToolStatus.AVAILABLE) {
+             // Forzar AVAILABLE si hay stock pero se envió otro estado (ej. LOANED)
             tool.setStatus(ToolStatus.AVAILABLE);
         }
+        // Si se envía stock 0 y estado AVAILABLE, es válido.
 
         ToolEntity saved = toolRepository.save(tool);
 
-        // Registrar movimiento en Kardex con la cantidad inicial (si es mayor que 0)
+        // Registrar movimiento en Kardex solo si el stock inicial es mayor que 0
         if (saved.getStock() > 0) {
             kardexService.registerMovement(saved, MovementType.INCOME, saved.getStock(), user);
         }
         return saved;
     }
 
-    // --- UPDATE HERRAMIENTAS ---
     @Transactional
     public ToolEntity updateTool(Long id, UpdateToolRequest updateRequest, UserEntity user) {
-        ToolEntity existingTool = getToolById(id);
+        ToolEntity existingTool = getToolById(id); // Usa el método que lanza ResourceNotFoundException
         existingTool.setName(updateRequest.name());
         existingTool.setCategory(updateRequest.category());
-        existingTool.setReplacementValue(updateRequest.replacementValue());
-
+        existingTool.setReplacementValue(updateRequest.replacementValue()); // @Min(1000) se valida en el DTO/Controller
         return toolRepository.save(existingTool);
     }
 
-    // --- DAR DE BAJA HERRAMIENTA ---
     @Transactional
     public ToolEntity decommissionTool(Long id, UserEntity user) {
-        ToolEntity tool = getToolById(id);
+        ToolEntity tool = getToolById(id); // Usa el método que lanza ResourceNotFoundException
 
+        // CORRECCIÓN: Usar excepción personalizada
         if (tool.getStatus() == ToolStatus.DECOMMISSIONED) {
-             throw new IllegalStateException("Tool is already decommissioned.");
+            throw new InvalidOperationException("Tool is already decommissioned.");
         }
-
+        // CORRECCIÓN: Usar excepción personalizada
         if (tool.getStatus() == ToolStatus.LOANED || tool.getStatus() == ToolStatus.REPAIRING) {
-            throw new IllegalStateException("Cannot decommission a tool while loaned or under repair.");
+            throw new InvalidOperationException("Cannot decommission a tool while loaned or under repair.");
         }
 
-        int quantityToDecommission = tool.getStock() > 0 ? tool.getStock() : 1; // Registrar baja de las unidades existentes o al menos 1 conceptualmente
+        int quantityToDecommission = tool.getStock() > 0 ? tool.getStock() : 1;
         tool.setStatus(ToolStatus.DECOMMISSIONED);
         tool.setStock(0);
         ToolEntity saved = toolRepository.save(tool);
 
-        // Registrar la baja en el Kardex
         kardexService.registerMovement(saved, MovementType.DECOMMISSION, quantityToDecommission, user);
         return saved;
     }
@@ -96,8 +100,9 @@ public class ToolService {
 
     @Transactional
     public void decrementStockForLoan(ToolEntity tool, UserEntity user) {
+        // CORRECCIÓN: Usar excepción personalizada para estado inválido o falta de stock
         if (tool.getStatus() != ToolStatus.AVAILABLE || tool.getStock() == null || tool.getStock() <= 0) {
-            throw new IllegalStateException("Tool is not available or out of stock.");
+            throw new InvalidOperationException("Tool is not available or out of stock for loan.");
         }
         tool.setStock(tool.getStock() - 1);
         if (tool.getStock() == 0) {
@@ -107,15 +112,13 @@ public class ToolService {
         kardexService.registerMovement(tool, MovementType.LOAN, 1, user);
     }
 
-    @Transactional // por mejorar 
+    @Transactional
     public void incrementStockForReturn(ToolEntity tool, UserEntity user) {
-        // Al devolver, el stock siempre aumenta en 1.
         int newStock = (tool.getStock() == null ? 0 : tool.getStock()) + 1;
         tool.setStock(newStock);
-        // Si el stock era 0 (estado LOANED) y ahora es > 0, vuelve a AVAILABLE.
-        // Si ya era AVAILABLE (había otras unidades), sigue AVAILABLE.
-        if (newStock > 0) {
-             tool.setStatus(ToolStatus.AVAILABLE);
+        // Si stock > 0 y no está en reparación/baja -> AVAILABLE
+        if (newStock > 0 && tool.getStatus() != ToolStatus.REPAIRING && tool.getStatus() != ToolStatus.DECOMMISSIONED) {
+            tool.setStatus(ToolStatus.AVAILABLE);
         }
         toolRepository.save(tool);
         kardexService.registerMovement(tool, MovementType.RETURN, 1, user);
@@ -123,59 +126,77 @@ public class ToolService {
 
     @Transactional
     public void markAsRepairing(ToolEntity tool, UserEntity user) {
-        tool.setStatus(ToolStatus.REPAIRING);
-        int quantityInRepair = 1; // Asumimos que se repara 1 unidad
-        tool.setStock(tool.getStock() - quantityInRepair); // Quitar del stock disponible
-        tool.setStock(Math.max(0, tool.getStock() - 1)); // Asegura no negativo
+        // CORRECCIÓN: Usar excepción personalizada
+        if (tool.getStatus() == ToolStatus.DECOMMISSIONED) {
+            throw new InvalidOperationException("Cannot mark a decommissioned tool as repairing.");
+        }
+        // Si ya está en reparación, podríamos no hacer nada o lanzar advertencia/excepción
+        if (tool.getStatus() == ToolStatus.REPAIRING) {
+             // Podría ser un return silencioso o lanzar excepción si se considera inválido llamarlo de nuevo
+             // throw new InvalidOperationException("Tool is already marked as repairing.");
+             return; // No hacer nada si ya está en reparación
+        }
+
+        tool.setStatus(ToolStatus.REPAIRING); // Cambia estado
+
+        // CORRECCIÓN: Decrementar stock disponible al entrar en reparación
+        // Asumiendo que 'stock' representa las unidades disponibles para prestar.
+        int quantityInRepair = 1; // Asumimos que se repara 1 unidad por llamada
+        // Asegurarse de no bajar de 0 si el stock ya era 0 por alguna razón
+        tool.setStock(Math.max(0, tool.getStock() - quantityInRepair));
 
         toolRepository.save(tool);
         kardexService.registerMovement(tool, MovementType.REPAIR, 1, user); // Registra que 1 unidad entró a reparación
     }
 
-    
     @Transactional
     public void markAsDecommissioned(ToolEntity tool, UserEntity user) {
-        int quantityDecommissioned = tool.getStock() > 0 ? tool.getStock() : 1;
+        int quantityDecommissioned = 1; // Se da de baja la unidad devuelta
         tool.setStatus(ToolStatus.DECOMMISSIONED);
         tool.setStock(0);
         toolRepository.save(tool);
-        kardexService.registerMovement(tool, MovementType.DECOMMISSION, quantityDecommissioned, user);  // Registra la baja en kardex
+        kardexService.registerMovement(tool, MovementType.DECOMMISSION, quantityDecommissioned, user);
     }
 
-    // --- MÉTODO PARA AJUSTE MANUAL DE STOCK ---
+
+    // --- MÉTODO PARA AJUSTE MANUAL DE STOCK (Refactorizado) ---
     @Transactional
     public ToolEntity adjustStock(Long id, int quantityChange, MovementType movementType, UserEntity user) {
         if (quantityChange == 0) {
-            throw new IllegalArgumentException("Quantity change cannot be zero.");
+            throw new InvalidOperationException("Quantity change cannot be zero.");
         }
 
-        if (movementType != MovementType.INCOME && movementType != MovementType.MANUAL_DECREASE) {
-            throw new IllegalArgumentException("Invalid movement type for manual stock adjustment.");
+        // NOTA: Usar MANUAL_DECREASE para disminución y validar tipo/cantidad
+        if (quantityChange > 0 && movementType != MovementType.INCOME) {
+             throw new InvalidOperationException("Positive stock adjustment requires INCOME movement type.");
+        }
+        if (quantityChange < 0 && movementType != MovementType.MANUAL_DECREASE) {
+            throw new InvalidOperationException("Negative stock adjustment requires MANUAL_DECREASE movement type.");
         }
 
-        ToolEntity tool = getToolById(id);
+        ToolEntity tool = getToolById(id); // Lanza ResourceNotFoundException si no existe
+        // Excepción personalizada
         if (tool.getStatus() == ToolStatus.DECOMMISSIONED) {
-            throw new IllegalStateException("Cannot adjust stock for a decommissioned tool.");
+            throw new InvalidOperationException("Cannot adjust stock for a decommissioned tool.");
         }
 
         int newStock = tool.getStock() + quantityChange;
+        // Excepción personalizada
         if (newStock < 0) {
-            throw new IllegalArgumentException("Stock adjustment would result in negative stock.");
+            throw new InvalidOperationException("Stock adjustment would result in negative stock.");
         }
 
         tool.setStock(newStock);
 
         // Actualizar estado basado en el nuevo stock
-        if (newStock > 0 && tool.getStatus() != ToolStatus.REPAIRING && tool.getStatus() != ToolStatus.DECOMMISSIONED) {
-            // Si hay stock y no está en reparación/baja -> Disponible
+        if (newStock > 0 && tool.getStatus() != ToolStatus.REPAIRING) { // No sacar de reparación automáticamente
             tool.setStatus(ToolStatus.AVAILABLE);
-        } else if (newStock == 0 && tool.getStatus() == ToolStatus.AVAILABLE) {
-            // Si el ajuste manual deja stock en 0 y estaba Disponible -> Cambiar a LOANED (como si se hubiera prestado la última)
+        } else if (newStock == 0 && (tool.getStatus() == ToolStatus.AVAILABLE || tool.getStatus() == ToolStatus.LOANED) ) {
             tool.setStatus(ToolStatus.LOANED);
         }
 
         ToolEntity saved = toolRepository.save(tool);
-        kardexService.registerMovement(saved, movementType, Math.abs(quantityChange), user); // Registrar cantidad absoluta
+        kardexService.registerMovement(saved, movementType, Math.abs(quantityChange), user);
 
         return saved;
     }

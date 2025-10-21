@@ -4,10 +4,9 @@ import dtos.StockAdjustmentRequest;
 import dtos.UpdateToolRequest;
 import entities.ToolEntity;
 import entities.UserEntity;
-import entities.enums.MovementType; 
-import jakarta.validation.Valid; 
+import entities.enums.MovementType;
+import jakarta.validation.Valid;
 import services.ToolService;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -45,13 +44,10 @@ public class ToolController {
         return toolService.createTool(tool, currentUser);
     }
 
-// --- ENDPOINT EDITAR ---
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
-    // Cambiar @RequestBody ToolEntity por UpdateToolRequest
     public ToolEntity updateTool(@PathVariable Long id, @Valid @RequestBody UpdateToolRequest updateRequest, Authentication authentication) {
         UserEntity currentUser = securityUtils.getUserFromAuthentication(authentication);
-        // Pasamos el DTO al servicio
         return toolService.updateTool(id, updateRequest, currentUser);
     }
 
@@ -60,10 +56,19 @@ public class ToolController {
     @PreAuthorize("hasRole('ADMIN')")
     public ToolEntity adjustStock(@PathVariable Long id, @Valid @RequestBody StockAdjustmentRequest request, Authentication authentication) {
         UserEntity currentUser = securityUtils.getUserFromAuthentication(authentication);
-        MovementType type = request.quantityChange() > 0 ? MovementType.INCOME : MovementType.RETURN; 
-        if (request.quantityChange() < 0) {
-            type = MovementType.MANUAL_DECREASE;
-            }
+
+        // CORRECCIÓN: Determinar el tipo de movimiento correcto basado en el signo de quantityChange
+        MovementType type;
+        if (request.quantityChange() > 0) {
+            type = MovementType.INCOME; // Usamos INCOME para aumentos manuales
+        } else if (request.quantityChange() < 0) {
+            type = MovementType.MANUAL_DECREASE; // Usamos el nuevo tipo para disminuciones
+        } else {
+            // El servicio ya valida quantityChange != 0, pero por si acaso
+            throw new IllegalArgumentException("Quantity change cannot be zero.");
+        }
+
+        // Llamar al servicio con el tipo determinado
         return toolService.adjustStock(id, request.quantityChange(), type, currentUser);
     }
 
