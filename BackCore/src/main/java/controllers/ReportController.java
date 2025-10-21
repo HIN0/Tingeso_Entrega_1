@@ -1,7 +1,9 @@
 package controllers;
 
+// ... (imports existentes)
 import entities.ClientEntity;
 import entities.LoanEntity;
+import org.springframework.format.annotation.DateTimeFormat; // Importar para formatear fechas
 import org.springframework.web.bind.annotation.*;
 import services.ReportService;
 
@@ -19,23 +21,32 @@ public class ReportController {
         this.reportService = reportService;
     }
 
-    // RF6.1: préstamos por estado (ACTIVE o LATE)
+    // --- RF6.1: Modificado para aceptar fechas opcionales ---
     @GetMapping("/loans")
-    public List<LoanEntity> getLoansByStatus(@RequestParam String status) {
-        return reportService.getLoansByStatus(status.toUpperCase());
+    public List<LoanEntity> getLoansByStatus(
+            @RequestParam String status,
+            // Usar required = false para que las fechas sean opcionales
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        // Pasar las fechas (que pueden ser null) al servicio
+        return reportService.getLoansByStatus(status.toUpperCase(), from, to);
     }
 
-    // RF6.2: clientes con préstamos atrasados
+    // --- RF6.2: Modificado para aceptar fechas opcionales ---
     @GetMapping("/clients/late")
-    public List<ClientEntity> getLateClients() {
-        return reportService.getClientsWithLateLoans();
+    public List<ClientEntity> getLateClients(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        // Pasar las fechas (que pueden ser null) al servicio
+        return reportService.getClientsWithLateLoans(from, to);
     }
 
-    // RF6.3: ranking de herramientas más prestadas
+    // --- RF6.3: Sin cambios, ya requería fechas ---
     @GetMapping("/tools/top")
     public List<Object[]> getTopTools(
-            @RequestParam("from") LocalDate from,
-            @RequestParam("to") LocalDate to) {
+            // Mantener required = true o quitarlo si @RequestParam es obligatorio por defecto
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
         return reportService.getTopTools(from, to);
     }
 }

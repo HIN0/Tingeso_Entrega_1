@@ -99,7 +99,7 @@ public class ReportServiceTest {
         assertTrue(result.stream().anyMatch(c -> c.getId().equals(1L)), "Debe contener al Cliente 1");
         assertTrue(result.stream().anyMatch(c -> c.getId().equals(2L)), "Debe contener al Cliente 2");
     }
-
+    
     // =======================================================================
     // ÉPICA 6: RF 6.3 - RANKING DE HERRAMIENTAS (getTopTools)
     // =======================================================================
