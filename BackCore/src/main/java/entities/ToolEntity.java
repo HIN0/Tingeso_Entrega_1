@@ -2,6 +2,9 @@ package entities;
 
 import entities.enums.ToolStatus;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 @Entity
@@ -17,15 +20,21 @@ public class ToolEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank(message = "Name cannot be blank") 
     private String name;
 
+    @NotBlank(message = "Category cannot be blank")
     private String category;
 
     @Enumerated(EnumType.STRING)
-    private ToolStatus status;
+    private ToolStatus status; 
 
+    @NotNull(message = "Stock cannot be null") 
+    @Min(value = 0, message = "Stock cannot be negative") 
     private Integer stock;
 
+    @NotNull(message = "Replacement value cannot be null") 
+    @Min(value = 1000, message = "Replacement value cannot be negative")
     @Column(name = "replacement_value")
     private Integer replacementValue;
 }

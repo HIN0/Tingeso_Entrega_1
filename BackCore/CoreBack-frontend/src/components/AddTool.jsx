@@ -6,29 +6,44 @@ function AddTool() {
   const [tool, setTool] = useState({
     name: "",
     category: "",
-    status: "AVAILABLE",
-    replacementValue: 0
+    replacementValue: 0,
+    stock: 0
   });
+  const [error, setError] = useState("");
   const navigate = useNavigate();
 
   const handleChange = (e) => {
-    setTool({ ...tool, [e.target.name]: e.target.value });
+    const value = (e.target.name === 'stock' || e.target.name === 'replacementValue')
+                  ? parseInt(e.target.value) || 0
+                  : e.target.value;
+    setTool({ ...tool, [e.target.name]: value });
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    setError("");
+
+    if (tool.stock <= 0 || tool.replacementValue <= 0) {
+        setError("Stock and Replacement Value cannot be negative.");
+        return;
+    }
+
     ToolService.create(tool)
       .then(() => {
         navigate("/tools");
       })
-      .catch((e) => {
-        console.error("Error creating tool:", e);
+      .catch((err) => {
+        console.error("Error creating tool:", err);
+        // Mostrar mensaje de error del backend si existe
+        const errorMsg = err.response?.data?.message || err.response?.data || "Failed to create tool. Please check the data.";
+        setError(errorMsg);
       });
   };
 
   return (
-    <div>
+    <div style={{ padding: 16 }}>
       <h2>Add Tool</h2>
+      {error && <p style={{ color: 'red' }}>Error: {error}</p>} {/* Mostrar error */}
       <form onSubmit={handleSubmit}>
         <div>
           <label>Name: </label>
@@ -53,13 +68,15 @@ function AddTool() {
         </div>
 
         <div>
-          <label>Status: </label>
-          <select name="status" value={tool.status} onChange={handleChange}>
-            <option value="AVAILABLE">Available</option>
-            <option value="LOANED">Loaned</option>
-            <option value="IN_REPAIR">In Repair</option>
-            <option value="DECOMMISSIONED">Decommissioned</option>
-          </select>
+          <label>Initial Stock: </label> 
+          <input
+            type="number"
+            name="stock"
+            value={tool.stock}
+            onChange={handleChange}
+            required
+            min="1" 
+          />
         </div>
 
         <div>
@@ -70,10 +87,11 @@ function AddTool() {
             value={tool.replacementValue}
             onChange={handleChange}
             required
+             min="1000"
           />
         </div>
 
-        <button type="submit">Save</button>
+        <button type="submit" style={{ marginTop: '15px' }}>Save</button> {/* Añadir margen */}
       </form>
     </div>
   );

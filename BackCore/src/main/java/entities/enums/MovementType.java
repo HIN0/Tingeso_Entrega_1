@@ -5,5 +5,6 @@ public enum MovementType {
     LOAN,          // Préstamo
     RETURN,        // Devolución
     REPAIR,        // En reparación
-    DECOMMISSION   // Baja definitiva
+    DECOMMISSION,   // Baja definitiva
+    MANUAL_DECREASE // Ajuste manual para reducir stock
 }

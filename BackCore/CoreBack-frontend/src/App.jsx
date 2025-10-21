@@ -9,6 +9,7 @@ import ReturnLoan from "./components/ReturnLoan";
 import ClientList from "./components/ClientList";
 import TariffManager from "./components/TariffManager";
 import ReportViewer from "./components/ReportViewer";
+import EditTool from "./components/EditTool";
 
 function RequireAuth({ children, roles }) {
   const { keycloak, initialized } = useKeycloak();
@@ -23,7 +24,6 @@ function RequireAuth({ children, roles }) {
   return children;
 }
 
-// Una vez ya logeado con Keycloak, este componente muestra el menú según el rol
 function Menu() {
   const { keycloak } = useKeycloak();
   const isAuth = !!keycloak?.authenticated;
@@ -48,26 +48,34 @@ export default function App() {
     <Router>
       <Header />
       <Menu />
-      <Routes>  
+      <Routes>
         <Route path="/" element={
           <div style={{ padding: 16 }}>
-            <h2>Bienvenido</h2>
-            <p>Inicia sesión para ver tu menú según tu rol.</p>
+            <h2>Bienvenido a ToolRent</h2>
           </div>
         } />
-
-        {/* protegidas por login */}
+        {/* --- Rutas de Herramientas --- */}
         <Route path="/tools" element={<RequireAuth><ToolList /></RequireAuth>} />
         <Route path="/tools/add" element={<RequireAuth roles={["ADMIN"]}><AddTool /></RequireAuth>} />
+        <Route path="/tools/edit/:id" element={<RequireAuth roles={["ADMIN"]}><EditTool /></RequireAuth>} />
+
+        {/* --- Rutas de Préstamos --- */}
         <Route path="/loans" element={<RequireAuth><LoanList /></RequireAuth>} />
-        <Route path="/loans/add" element={<RequireAuth roles={["USER","ADMIN"]}><AddLoan /></RequireAuth>} />
-        <Route path="/loans/return/:id" element={<RequireAuth roles={["ADMIN"]}><ReturnLoan /></RequireAuth>} />
+        <Route path="/loans/add" element={<RequireAuth roles={["ADMIN","USER"]}><AddLoan /></RequireAuth>} />
+        <Route path="/loans/return/:id" element={<RequireAuth roles={["ADMIN", "USER"]}><ReturnLoan /></RequireAuth>} />
+
+        {/* --- Otras Rutas --- */}
         <Route path="/clients" element={<RequireAuth roles={["ADMIN"]}><ClientList /></RequireAuth>} />
         <Route path="/tariffs" element={<RequireAuth roles={["ADMIN"]}><TariffManager /></RequireAuth>} />
-        <Route path="/reports" element={<RequireAuth roles={["USER","ADMIN"]}><ReportViewer /></RequireAuth>} /> 
+        <Route path="/reports" element={<RequireAuth roles={["USER","ADMIN"]}><ReportViewer /></RequireAuth>} />
 
         {/* fallback */}
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={
+            <div style={{ padding: 16 }}>
+                <h2>Página no encontrada</h2>
+                <Link to="/">Volver al inicio</Link>
+            </div>
+        } />
       </Routes>
     </Router>
   );

@@ -1,12 +1,17 @@
 package controllers;
 
+import dtos.StockAdjustmentRequest;
+import dtos.UpdateToolRequest;
 import entities.ToolEntity;
 import entities.UserEntity;
+import entities.enums.MovementType; 
+import jakarta.validation.Valid; 
 import services.ToolService;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-import app.utils.SecurityUtils; // Nueva importación
+import app.utils.SecurityUtils;
 
 import java.util.List;
 
@@ -16,9 +21,9 @@ import java.util.List;
 public class ToolController {
 
     private final ToolService toolService;
-    private final SecurityUtils securityUtils; // CAMBIO: Inyectar SecurityUtils
+    private final SecurityUtils securityUtils;
 
-    public ToolController(ToolService toolService, SecurityUtils securityUtils) { // CAMBIO: Constructor con SecurityUtils
+    public ToolController(ToolService toolService, SecurityUtils securityUtils) {
         this.toolService = toolService;
         this.securityUtils = securityUtils;
     }
@@ -34,18 +39,39 @@ public class ToolController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')") // Solo ADMIN puede crear
-    public ToolEntity createTool(@RequestBody ToolEntity tool, Authentication authentication) {
-        // Obteniendo el usuario real del JWT
-        UserEntity currentUser = securityUtils.getUserFromAuthentication(authentication); // CAMBIO: Usar instancia
+    @PreAuthorize("hasRole('ADMIN')")
+    public ToolEntity createTool(@Valid @RequestBody ToolEntity tool, Authentication authentication) {
+        UserEntity currentUser = securityUtils.getUserFromAuthentication(authentication);
         return toolService.createTool(tool, currentUser);
     }
 
+// --- ENDPOINT EDITAR ---
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    // Cambiar @RequestBody ToolEntity por UpdateToolRequest
+    public ToolEntity updateTool(@PathVariable Long id, @Valid @RequestBody UpdateToolRequest updateRequest, Authentication authentication) {
+        UserEntity currentUser = securityUtils.getUserFromAuthentication(authentication);
+        // Pasamos el DTO al servicio
+        return toolService.updateTool(id, updateRequest, currentUser);
+    }
+
+    // --- ENDPOINT PARA AJUSTAR STOCK ---
+    @PatchMapping("/{id}/stock")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ToolEntity adjustStock(@PathVariable Long id, @Valid @RequestBody StockAdjustmentRequest request, Authentication authentication) {
+        UserEntity currentUser = securityUtils.getUserFromAuthentication(authentication);
+        MovementType type = request.quantityChange() > 0 ? MovementType.INCOME : MovementType.RETURN; 
+        if (request.quantityChange() < 0) {
+            type = MovementType.MANUAL_DECREASE;
+            }
+        return toolService.adjustStock(id, request.quantityChange(), type, currentUser);
+    }
+
+
     @PutMapping("/{id}/decommission")
-    @PreAuthorize("hasRole('ADMIN')") // Solo ADMIN puede dar de baja
+    @PreAuthorize("hasRole('ADMIN')")
     public ToolEntity decommissionTool(@PathVariable Long id, Authentication authentication) {
-        // Obteniendo el usuario real del JWT
-        UserEntity currentUser = securityUtils.getUserFromAuthentication(authentication); // CAMBIO: Usar instancia
+        UserEntity currentUser = securityUtils.getUserFromAuthentication(authentication);
         return toolService.decommissionTool(id, currentUser);
     }
 }
