@@ -10,6 +10,8 @@ import ClientList from "./components/ClientList";
 import TariffManager from "./components/TariffManager";
 import ReportViewer from "./components/ReportViewer";
 import EditTool from "./components/EditTool";
+import AddClient from "./components/AddClient"; // Importar AddClient
+import EditClient from "./components/EditClient"; // Importar EditClient
 
 function RequireAuth({ children, roles }) {
   const { keycloak, initialized } = useKeycloak();
@@ -64,8 +66,12 @@ export default function App() {
         <Route path="/loans/add" element={<RequireAuth roles={["ADMIN","USER"]}><AddLoan /></RequireAuth>} />
         <Route path="/loans/return/:id" element={<RequireAuth roles={["ADMIN", "USER"]}><ReturnLoan /></RequireAuth>} />
 
-        {/* --- Otras Rutas --- */}
+        {/* --- Rutas de Clientes --- */}
         <Route path="/clients" element={<RequireAuth roles={["ADMIN"]}><ClientList /></RequireAuth>} />
+        <Route path="/clients/add" element={<RequireAuth roles={["ADMIN"]}><AddClient /></RequireAuth>} /> {/* Nueva ruta */}
+        <Route path="/clients/edit/:id" element={<RequireAuth roles={["ADMIN"]}><EditClient /></RequireAuth>} /> {/* Nueva ruta */}
+        
+        {/* --- Rutas de Tarifas y Reportes --- */}
         <Route path="/tariffs" element={<RequireAuth roles={["ADMIN"]}><TariffManager /></RequireAuth>} />
         <Route path="/reports" element={<RequireAuth roles={["USER","ADMIN"]}><ReportViewer /></RequireAuth>} />
 

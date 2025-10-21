@@ -1,13 +1,12 @@
 package controllers;
 
+import dtos.UpdateClientRequest;
 import entities.ClientEntity;
-import entities.UserEntity;
 import entities.enums.ClientStatus;
+import jakarta.validation.Valid; 
 import services.ClientService;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-import app.utils.SecurityUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -15,15 +14,13 @@ import java.util.Map;
 @RestController
 @RequestMapping("/clients")
 @CrossOrigin("*")
-@PreAuthorize("hasRole('ADMIN')") // Protege todos los métodos para solo ADMIN
+@PreAuthorize("hasRole('ADMIN')")
 public class ClientController {
 
     private final ClientService clientService;
-    private final SecurityUtils securityUtils; // Inyectar SecurityUtils
 
-    public ClientController(ClientService clientService, SecurityUtils securityUtils) {
+    public ClientController(ClientService clientService) { 
         this.clientService = clientService;
-        this.securityUtils = securityUtils;
     }
 
     @GetMapping
@@ -31,11 +28,25 @@ public class ClientController {
         return clientService.getAllClients();
     }
 
+    // --- NUEVO ENDPOINT GET BY ID --- (Útil para el form de edición)
+    @GetMapping("/{id}")
+    public ClientEntity getClientById(@PathVariable Long id) {
+        return clientService.getClientById(id);
+    }
+
+
     @PostMapping
-    // No necesita Authentication ni SecurityUtils, pero se podría usar para Kardex futuro.
-    public ClientEntity createClient(@RequestBody ClientEntity client) { 
+    public ClientEntity createClient(@Valid @RequestBody ClientEntity client) { // Añadir @Valid
+        // El servicio asigna el estado ACTIVE por defecto
         return clientService.createClient(client);
     }
+
+    // --- NUEVO ENDPOINT PARA EDITAR DATOS ---
+    @PutMapping("/{id}")
+    public ClientEntity updateClientDetails(@PathVariable Long id, @Valid @RequestBody UpdateClientRequest updateRequest) {
+        return clientService.updateClientDetails(id, updateRequest);
+    }
+
 
     @PatchMapping("/{id}/status")
     public ClientEntity updateClientStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
@@ -43,12 +54,17 @@ public class ClientController {
         if (statusStr == null) {
             throw new IllegalArgumentException("Status is required");
         }
-        ClientStatus status = ClientStatus.valueOf(statusStr.toUpperCase());
-        return clientService.updateStatus(id, status);
+        try {
+            ClientStatus status = ClientStatus.valueOf(statusStr.toUpperCase());
+            return clientService.updateStatus(id, status);
+        } catch (IllegalArgumentException e) {
+             throw new IllegalArgumentException("Invalid status value: " + statusStr + ". Must be ACTIVE or RESTRICTED.");
+        }
     }
 
+    // Endpoint obsoleto si usamos PATCH /status, pero lo dejamos por compatibilidad si se usó
     @PutMapping("/{id}/restrict")
-    public void restrictClient(@PathVariable Long id) {
-        clientService.updateStatus(id, ClientStatus.RESTRICTED);
+    public ClientEntity restrictClient(@PathVariable Long id) { // Devolver entidad actualizada
+        return clientService.updateStatus(id, ClientStatus.RESTRICTED);
     }
 }
