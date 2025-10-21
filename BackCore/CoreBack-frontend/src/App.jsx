@@ -10,8 +10,9 @@ import ClientList from "./components/ClientList";
 import TariffManager from "./components/TariffManager";
 import ReportViewer from "./components/ReportViewer";
 import EditTool from "./components/EditTool";
-import AddClient from "./components/AddClient"; // Importar AddClient
-import EditClient from "./components/EditClient"; // Importar EditClient
+import AddClient from "./components/AddClient"; 
+import EditClient from "./components/EditClient";
+import KardexViewer from "./components/kardexViewer";
 
 function RequireAuth({ children, roles }) {
   const { keycloak, initialized } = useKeycloak();
@@ -37,10 +38,11 @@ function Menu() {
       <Link to="/tools">Herramientas</Link>
       {(isAdmin) && <Link to="/tools/add">Agregar herramienta</Link>}
       <Link to="/loans">Préstamos</Link>
-      {(isUser || isAdmin) && <Link to="/loans/add">Registrar préstamo</Link>}
       {(isAdmin) && <Link to="/clients">Clientes</Link>}
       {(isAdmin) && <Link to="/tariffs">Tarifas</Link>}
+      {(isUser || isAdmin) && <Link to="/loans/add">Registrar préstamo</Link>}
       {(isUser || isAdmin) && <Link to="/reports">Reportes</Link>} 
+      {(isUser || isAdmin) && <Link to="/kardex">Kardex</Link>}
     </nav>
   );
 }
@@ -68,12 +70,13 @@ export default function App() {
 
         {/* --- Rutas de Clientes --- */}
         <Route path="/clients" element={<RequireAuth roles={["ADMIN"]}><ClientList /></RequireAuth>} />
-        <Route path="/clients/add" element={<RequireAuth roles={["ADMIN"]}><AddClient /></RequireAuth>} /> {/* Nueva ruta */}
-        <Route path="/clients/edit/:id" element={<RequireAuth roles={["ADMIN"]}><EditClient /></RequireAuth>} /> {/* Nueva ruta */}
+        <Route path="/clients/add" element={<RequireAuth roles={["ADMIN"]}><AddClient /></RequireAuth>} />
+        <Route path="/clients/edit/:id" element={<RequireAuth roles={["ADMIN"]}><EditClient /></RequireAuth>} />
         
-        {/* --- Rutas de Tarifas y Reportes --- */}
+        {/* --- Rutas de Tarifas, Reportes y Kardex--- */}
         <Route path="/tariffs" element={<RequireAuth roles={["ADMIN"]}><TariffManager /></RequireAuth>} />
         <Route path="/reports" element={<RequireAuth roles={["USER","ADMIN"]}><ReportViewer /></RequireAuth>} />
+        <Route path="/kardex" element={<RequireAuth roles={["ADMIN", "USER"]}><KardexViewer /></RequireAuth>} />
 
         {/* fallback */}
         <Route path="*" element={
