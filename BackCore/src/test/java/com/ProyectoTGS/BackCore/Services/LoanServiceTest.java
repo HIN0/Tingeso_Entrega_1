@@ -316,4 +316,73 @@ public class LoanServiceTest {
             "Solo se pueden devolver préstamos activos o atrasados.");
         verify(loanRepository, never()).save(any());
     }
+
+// =========================================================================================================
+// ÉPICA 4 / 2: TEST PARA CÁLCULO DE TARIFA DE ARRIENDO (returnLoan)
+// =========================================================================================================
+
+    @Test
+    void returnLoan_CalculatesRentalFeeCorrectly() {
+        // ARRANGE: Préstamo que duró 3 días exactos (devuelto el día 3 después del inicio)
+        Long loanId = 15L;
+        LocalDate startDate = LocalDate.now().minusDays(3);
+        LocalDate dueDate = LocalDate.now().plusDays(5); // Vencimiento futuro para no tener multa por atraso
+        LocalDate returnDate = LocalDate.now(); // Devuelto hoy
+
+        LoanEntity loan = LoanEntity.builder()
+            .id(loanId)
+            .client(clientActive) // Cliente activo definido en setUp()
+            .tool(toolAvailable) // Herramienta disponible definida en setUp()
+            .startDate(startDate)
+            .dueDate(dueDate)
+            .status(LoanStatus.ACTIVE)
+            .totalPenalty(0.0) // Penalidad inicial
+            .build();
+
+        // MOCKEO:
+        when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
+        // Mockear la nueva llamada a getDailyRentFee()
+        when(tariffService.getDailyRentFee()).thenReturn(1000.0); // Supongamos tarifa de 1000 por día
+        // Simular el guardado del préstamo
+        when(loanRepository.save(any(LoanEntity.class))).thenReturn(loan);
+
+        // ACT: Devolver la herramienta sin daño y sin atraso
+        LoanEntity returnedLoan = loanService.returnLoan(loanId, toolAvailable.getId(), false, false, testUser, returnDate);
+
+        // ASSERT:
+        // Costo esperado = 3 días * 1000/día = 3000
+        assertEquals(3000.0, returnedLoan.getTotalPenalty(), 0.01); // Usamos delta para comparar doubles
+        assertEquals(LoanStatus.CLOSED, returnedLoan.getStatus()); // Estado debe ser cerrado
+        // Verificar que se incrementó el stock y se registró en Kardex
+        verify(toolService, times(1)).incrementStockForReturn(toolAvailable, testUser);
+        verify(clientService, times(1)).updateStatus(clientActive.getId(), ClientStatus.RESTRICTED);
+    }
+
+    @Test
+    void returnLoan_AppliesMinimumOneDayRentalFee() {
+        // ARRANGE: Préstamo devuelto el mismo día que inició (menos de 1 día)
+        Long loanId = 16L;
+        LocalDate startDate = LocalDate.now();
+        LocalDate dueDate = LocalDate.now().plusDays(5);
+        LocalDate returnDate = LocalDate.now(); // Devuelto el mismo día
+
+        LoanEntity loan = LoanEntity.builder() // ... (similar al test anterior, pero con startDate = hoy)
+            .id(loanId).client(clientActive).tool(toolAvailable).startDate(startDate)
+            .dueDate(dueDate).status(LoanStatus.ACTIVE).totalPenalty(0.0).build();
+
+        when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
+        when(tariffService.getDailyRentFee()).thenReturn(1000.0); // Tarifa 1000
+        when(loanRepository.save(any(LoanEntity.class))).thenReturn(loan);
+
+        // ACT: Devolver sin daño/atraso el mismo día
+        LoanEntity returnedLoan = loanService.returnLoan(loanId, toolAvailable.getId(), false, false, testUser, returnDate);
+
+        // ASSERT:
+        // Costo esperado = 1 día (mínimo) * 1000/día = 1000
+        assertEquals(1000.0, returnedLoan.getTotalPenalty(), 0.01);
+        assertEquals(LoanStatus.CLOSED, returnedLoan.getStatus());
+        verify(toolService, times(1)).incrementStockForReturn(toolAvailable, testUser);
+        // Verificar si restringe o no según tu lógica final para montos > 0
+        verify(clientService, times(1)).updateStatus(clientActive.getId(), ClientStatus.RESTRICTED); // Asumiendo que restringe
+    }
 }

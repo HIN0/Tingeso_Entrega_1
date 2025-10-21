@@ -14,7 +14,6 @@ public class TariffService {
         this.tariffRepository = tariffRepository;
     }
 
-    // En este sistema asumimos que solo hay UNA fila de tarifas
     @Transactional(readOnly = true)
     public TariffEntity getTariff() {
         return tariffRepository.findAll().stream()
@@ -31,9 +30,16 @@ public class TariffService {
         return tariffRepository.save(current);
     }
 
-    // Métodos auxiliares que ya usas en LoanService
     public double getDailyLateFee() {
         return getTariff().getDailyLateFee();
+    }
+
+    public double getDailyRentFee() {
+        TariffEntity tariff = getTariff();
+        if (tariff.getDailyRentFee() == null) {
+            throw new RuntimeException("Daily Rent Fee is not configured.");
+        }
+        return tariff.getDailyRentFee(); // Devuelve el valor
     }
 
     public double getRepairFee() {
