@@ -29,9 +29,7 @@ public class LoanEntity {
     private ToolEntity tool;
 
     private LocalDate startDate;
-
     private LocalDate dueDate;
-
     private LocalDate returnDate;
 
     @Enumerated(EnumType.STRING)

@@ -16,7 +16,6 @@ public interface LoanRepository extends JpaRepository<LoanEntity, Long> {
     List<LoanEntity> findByClient(ClientEntity client);
     List<LoanEntity> findByTool(ToolEntity tool);
     List<LoanEntity> findByStatus(LoanStatus status);
-        // Ranking de herramientas más prestadas en rango de fechas
     @Query("SELECT l.tool, COUNT(l) as total " +
            "FROM LoanEntity l " +
            "WHERE l.startDate >= :from AND l.startDate <= :to " +
@@ -24,4 +23,9 @@ public interface LoanRepository extends JpaRepository<LoanEntity, Long> {
            "ORDER BY total DESC")
     List<Object[]> findTopToolsByDateRange(LocalDate from, LocalDate to);
     List<LoanEntity> findByClientAndStatus(ClientEntity client, LoanStatus status);
+    
+    // Busca préstamos CERRADOS de un cliente que tengan una penalidad pendiente (mayor a 0)
+    List<LoanEntity> findByClientAndStatusAndTotalPenaltyGreaterThan(ClientEntity client, LoanStatus status, double penaltyThreshold);
+    // Cuenta cuántos préstamos ATRASADOS tiene un cliente
+    long countByClientAndStatus(ClientEntity client, LoanStatus status);
 }

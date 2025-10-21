@@ -2,9 +2,12 @@ package controllers;
 
 import dtos.LoanRequest;
 import dtos.ReturnLoanRequest;
+import entities.ClientEntity;
 import entities.LoanEntity;
-import entities.UserEntity; // Asegúrate de tener esta importación
+import entities.UserEntity;
 import jakarta.validation.Valid;
+
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
@@ -15,7 +18,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/loans")
-@CrossOrigin("*") // Usando el comodín para resolver CORS
+@CrossOrigin("*")
 public class LoanController {
 
     private final LoanService loanService;
@@ -31,33 +34,49 @@ public class LoanController {
     // MÉTODO AÑADIDO: GET para la ruta base /loans
     // **********************************************
     @GetMapping // Mapea a GET /loans
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')") 
-    public List<LoanEntity> getAllLoans() {
-        return loanService.getActiveLoans();
+        @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+        public List<LoanEntity> getAllLoans() {
+            // Por ahora, devolvemos activos + atrasados para que se vean en la lista principal.
+            List<LoanEntity> active = loanService.getActiveLoans();
+            List<LoanEntity> late = loanService.getLateLoans();
+            active.addAll(late);
+            return active;
+        }
+
+        @PostMapping(consumes = "application/json", produces = "application/json")
+        @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+        public LoanEntity createLoanJson(@RequestBody @Valid LoanRequest req, Authentication authentication) {
+            UserEntity currentUser = securityUtils.getUserFromAuthentication(authentication);
+            return loanService.createLoan(req.clientId(), req.toolId(), req.startDate(), req.dueDate(), currentUser);
+        }
+
+        @PutMapping(path = "/{id}/return", consumes = "application/json", produces = "application/json")
+        @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+        public LoanEntity returnLoanJson(@PathVariable Long id, @RequestBody @Valid ReturnLoanRequest req, Authentication authentication) {
+            UserEntity currentUser = securityUtils.getUserFromAuthentication(authentication);
+            return loanService.returnLoan(
+                id,
+                req.toolId(),
+                req.damaged(),
+                req.irreparable(),
+                currentUser,
+                req.returnDate()
+            );
     }
 
-    // ==== versión JSON (para frontend) ====
-    @PostMapping(consumes = "application/json", produces = "application/json")
+    // --- ENDPOINT PARA MARCAR COMO PAGADO ---
+    @PatchMapping("/{loanId}/pay")
+    // Permitir a Admin o Empleado registrar un pago
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    public LoanEntity createLoanJson(@RequestBody @Valid LoanRequest req, Authentication authentication) {
-        UserEntity currentUser = securityUtils.getUserFromAuthentication(authentication); 
-        return loanService.createLoan(req.clientId(), req.toolId(), req.startDate(), req.dueDate(), currentUser);
+    public ResponseEntity<ClientEntity> markLoanAsPaid(@PathVariable Long loanId) {
+        // La autenticación (quién lo hizo) no se usa aquí, pero podría añadirse para auditoría
+        ClientEntity updatedClient = loanService.markLoanAsPaid(loanId);
+        // Devolver el estado actualizado del cliente (puede seguir RESTRICTED o cambiar a ACTIVE)
+        return ResponseEntity.ok(updatedClient);
+        // Alternativa: Devolver solo un 200 OK sin cuerpo
+        // loanService.markLoanAsPaid(loanId);
+        // return ResponseEntity.ok().build();
     }
-
-    @PutMapping(path = "/{id}/return", consumes = "application/json", produces = "application/json")
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    public LoanEntity returnLoanJson(@PathVariable Long id, @RequestBody @Valid ReturnLoanRequest req, Authentication authentication) {
-        UserEntity currentUser = securityUtils.getUserFromAuthentication(authentication);
-        return loanService.returnLoan(
-            id,
-            req.toolId(),
-            req.damaged(),
-            req.irreparable(),
-            currentUser,
-            req.returnDate()
-        );
-    }
-
 
     @PostMapping(params = {"clientId","toolId","dueDate"})
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")

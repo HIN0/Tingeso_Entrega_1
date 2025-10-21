@@ -51,53 +51,75 @@ public class LoanService {
         return createLoan(clientId, toolId, LocalDate.now(), dueDate, user);
     }
 
+// --- Método createLoan con VALIDACIÓN REFINADA ---
     @Transactional
     public LoanEntity createLoan(Long clientId, Long toolId, LocalDate startDate, LocalDate dueDate, UserEntity user) {
+        // --- Obtener Cliente y Herramienta ---
         ClientEntity client = clientRepository.findById(clientId)
-                .orElseThrow(() -> new ResourceNotFoundException("Client not found with id: " + clientId)); 
+                .orElseThrow(() -> new ResourceNotFoundException("Client not found with id: " + clientId));
         ToolEntity tool = toolRepository.findById(toolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Tool not found with id: " + toolId));
 
+        // --- Validaciones de Negocio ---
+
+        // 1. Estado General del Cliente
         if (client.getStatus() == ClientStatus.RESTRICTED) {
             throw new InvalidOperationException("Client is restricted and cannot request loans.");
         }
 
+        // 2. Verificar préstamos ATRASADOS (LATE)
+        long lateLoanCount = loanRepository.countByClientAndStatus(client, LoanStatus.LATE);
+        if (lateLoanCount > 0) {
+            throw new InvalidOperationException("Client has " + lateLoanCount + " late loan(s) that must be returned.");
+        }
+
+        // 3. Verificar DEUDAS PENDIENTES (CLOSED con totalPenalty > 0)
+        List<LoanEntity> unpaidClosedLoans = loanRepository.findByClientAndStatusAndTotalPenaltyGreaterThan(
+                client, LoanStatus.CLOSED, 0.0);
+        if (!unpaidClosedLoans.isEmpty()) {
+            throw new InvalidOperationException("Client has outstanding payments due for " + unpaidClosedLoans.size() + " previous loan(s).");
+        }
+
+        // 4. Disponibilidad de Herramienta
         if (tool.getStatus() != ToolStatus.AVAILABLE || tool.getStock() == null || tool.getStock() <= 0) {
             throw new InvalidOperationException("Tool is not available or out of stock.");
         }
+
+        // 5. Fechas Válidas
         if (startDate == null) startDate = LocalDate.now();
         if (dueDate == null) throw new IllegalArgumentException("dueDate is required.");
         if (dueDate.isBefore(startDate)) {
             throw new IllegalArgumentException("Due date cannot be before start date.");
         }
 
-        // Validación Límite 5 Préstamos (RN Épica 2)
-        long activeCount = loanRepository.findByClientAndStatus(client, LoanStatus.ACTIVE).size()
-                         + loanRepository.findByClientAndStatus(client, LoanStatus.LATE).size(); // Incluir LATE en el conteo
-        if (activeCount >= 5) {
-            throw new InvalidOperationException("Client has reached the maximum number of active/late loans (5)."); // Usa excepción personalizada
+        // 6. Límite de 5 Préstamos Activos/Atrasados (Ya incluye LATE, está bien)
+        long activeOrLateCount = loanRepository.findByClientAndStatus(client, LoanStatus.ACTIVE).size() + lateLoanCount;
+        if (activeOrLateCount >= 5) {
+            throw new InvalidOperationException("Client has reached the maximum number of active/late loans (5).");
         }
 
-        // Validación No Repetir Herramienta Activa (RN Épica 2)
-        boolean hasSameToolActive = loanRepository.findByClientAndStatus(client, LoanStatus.ACTIVE).stream()
+        // 7. No Repetir Herramienta Activa/Atrasada (Ya incluye LATE, está bien)
+        boolean hasSameToolActiveOrLate = loanRepository.findByClientAndStatus(client, LoanStatus.ACTIVE).stream()
                 .anyMatch(l -> l.getTool() != null && l.getTool().getId().equals(toolId))
                 ||
-                loanRepository.findByClientAndStatus(client, LoanStatus.LATE).stream()
+                loanRepository.findByClientAndStatus(client, LoanStatus.LATE).stream() // Re-chequeo por si acaso
                 .anyMatch(l -> l.getTool() != null && l.getTool().getId().equals(toolId));
-        if (hasSameToolActive) {
-            throw new InvalidOperationException("Client already has an active or late loan for this tool."); // Usa excepción personalizada
+        if (hasSameToolActiveOrLate) {
+            throw new InvalidOperationException("Client already has an active or late loan for this tool.");
         }
 
+
+        // --- Crear y Guardar Préstamo ---
         LoanEntity loan = LoanEntity.builder()
                 .client(client)
                 .tool(tool)
                 .startDate(startDate)
                 .dueDate(dueDate)
                 .status(LoanStatus.ACTIVE)
-                .totalPenalty(0.0) // Penalidad inicial es 0
+                .totalPenalty(0.0)
                 .build();
 
-        toolService.decrementStockForLoan(tool, user); // Esto ya registra LOAN en Kardex
+        toolService.decrementStockForLoan(tool, user);
         return loanRepository.save(loan);
     }
 
@@ -183,6 +205,50 @@ public class LoanService {
             clientService.updateStatus(loan.getClient().getId(), ClientStatus.RESTRICTED);
         }
         return savedLoan;
+    }
+
+    // --- NUEVO MÉTODO PARA MARCAR COMO PAGADO Y REACTIVAR SI CORRESPONDE ---
+    @Transactional
+    public ClientEntity markLoanAsPaid(Long loanId) {
+        // 1. Encontrar el préstamo
+        LoanEntity loan = loanRepository.findById(loanId)
+                .orElseThrow(() -> new ResourceNotFoundException("Loan not found with id: " + loanId));
+
+        // 2. Validar que sea un préstamo cerrado y con deuda
+        if (loan.getStatus() != LoanStatus.CLOSED) {
+            throw new InvalidOperationException("Only closed loans can be marked as paid.");
+        }
+        if (loan.getTotalPenalty() <= 0) {
+            // Ya está pagado (o no tenía deuda), no hacer nada o lanzar advertencia/excepción
+            // throw new InvalidOperationException("Loan has no outstanding penalty or is already considered paid.");
+             System.out.println("Loan " + loanId + " has no outstanding amount or is already paid."); // Log temporal
+             return loan.getClient(); // Devolver el cliente sin cambios
+        }
+
+        // 3. Marcar como pagado (poniendo la penalidad a 0)
+        loan.setTotalPenalty(0.0);
+        // Si usaras el campo 'paid': loan.setPaid(true);
+        loanRepository.save(loan);
+
+        // 4. Verificar si el cliente puede ser reactivado
+        ClientEntity client = loan.getClient();
+        // Buscar si quedan OTROS préstamos cerrados SIN PAGAR para este cliente
+        List<LoanEntity> unpaidClosedLoans = loanRepository.findByClientAndStatusAndTotalPenaltyGreaterThan(
+                client, LoanStatus.CLOSED, 0.0);
+
+        // Buscar si quedan préstamos ATRASADOS para este cliente
+        long lateLoanCount = loanRepository.countByClientAndStatus(client, LoanStatus.LATE);
+
+        // 5. Reactivar si no hay otras deudas ni atrasos
+        if (unpaidClosedLoans.isEmpty() && lateLoanCount == 0) {
+            // Solo reactivar si actualmente está restringido
+            if(client.getStatus() == ClientStatus.RESTRICTED) {
+                return clientService.updateStatus(client.getId(), ClientStatus.ACTIVE);
+            }
+        }
+
+        // Si no se reactivó, devolver el cliente en su estado actual (probablemente RESTRICTED)
+        return client; // Devuelve el cliente (potencialmente actualizado)
     }
 
     @Transactional(readOnly = true)
