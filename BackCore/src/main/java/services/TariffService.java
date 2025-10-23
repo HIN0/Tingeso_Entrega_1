@@ -35,11 +35,7 @@ public class TariffService {
     }
 
     public double getDailyRentFee() {
-        TariffEntity tariff = getTariff();
-        if (tariff.getDailyRentFee() == null) {
-            throw new RuntimeException("Daily Rent Fee is not configured.");
-        }
-        return tariff.getDailyRentFee(); // Devuelve el valor
+        return getTariff().getDailyRentFee();
     }
 
     public double getRepairFee() {

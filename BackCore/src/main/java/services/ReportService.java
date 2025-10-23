@@ -7,7 +7,6 @@ import entities.enums.LoanStatus;
 import org.springframework.stereotype.Service;
 import repositories.ClientRepository;
 import repositories.LoanRepository;
-// import repositories.ToolRepository; // No se usa directamente aquí
 
 import java.time.LocalDate;
 import java.util.List;
@@ -18,8 +17,7 @@ public class ReportService {
     private final LoanRepository loanRepository;
     private final ClientRepository clientRepository; 
 
-    // Ajustar constructor si ToolRepository no se usa
-    public ReportService(LoanRepository loanRepository, ClientRepository clientRepository /*, ToolRepository toolRepository */) {
+    public ReportService(LoanRepository loanRepository, ClientRepository clientRepository) {
         this.loanRepository = loanRepository;
         this.clientRepository = clientRepository;
     }
@@ -33,9 +31,9 @@ public class ReportService {
         } else {
             // Si hay fechas, llama al nuevo método con filtro
             // Validar que 'from' no sea posterior a 'to'
-             if (from.isAfter(to)) {
-                 throw new IllegalArgumentException("Start date cannot be after end date.");
-             }
+            if (from.isAfter(to)) {
+                throw new IllegalArgumentException("Start date cannot be after end date.");
+            }
             return loanRepository.findByStatusAndStartDateBetween(loanStatus, from, to);
         }
     }
@@ -68,7 +66,7 @@ public class ReportService {
         return loanRepository.findTopToolsByDateRange(from, to);
     }
 
-    // --- Bonus: Clientes restringidos (sin cambios) ---
+    // --- Clientes restringidos ---
     public List<ClientEntity> getRestrictedClients() {
         return clientRepository.findByStatus(ClientStatus.RESTRICTED);
     }

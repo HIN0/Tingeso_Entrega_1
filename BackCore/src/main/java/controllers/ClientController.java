@@ -28,25 +28,20 @@ public class ClientController {
         return clientService.getAllClients();
     }
 
-    // --- NUEVO ENDPOINT GET BY ID --- (Útil para el form de edición)
     @GetMapping("/{id}")
     public ClientEntity getClientById(@PathVariable Long id) {
         return clientService.getClientById(id);
     }
 
-
     @PostMapping
-    public ClientEntity createClient(@Valid @RequestBody ClientEntity client) { // Añadir @Valid
-        // El servicio asigna el estado ACTIVE por defecto
+    public ClientEntity createClient(@Valid @RequestBody ClientEntity client) {
         return clientService.createClient(client);
     }
 
-    // --- NUEVO ENDPOINT PARA EDITAR DATOS ---
     @PutMapping("/{id}")
     public ClientEntity updateClientDetails(@PathVariable Long id, @Valid @RequestBody UpdateClientRequest updateRequest) {
         return clientService.updateClientDetails(id, updateRequest);
     }
-
 
     @PatchMapping("/{id}/status")
     public ClientEntity updateClientStatus(@PathVariable Long id, @RequestBody Map<String, String> body) {
@@ -58,13 +53,7 @@ public class ClientController {
             ClientStatus status = ClientStatus.valueOf(statusStr.toUpperCase());
             return clientService.updateStatus(id, status);
         } catch (IllegalArgumentException e) {
-             throw new IllegalArgumentException("Invalid status value: " + statusStr + ". Must be ACTIVE or RESTRICTED.");
+            throw new IllegalArgumentException("Invalid status value: " + statusStr + ". Must be ACTIVE or RESTRICTED.");
         }
-    }
-
-    // Endpoint obsoleto si usamos PATCH /status, pero lo dejamos por compatibilidad si se usó
-    @PutMapping("/{id}/restrict")
-    public ClientEntity restrictClient(@PathVariable Long id) { // Devolver entidad actualizada
-        return clientService.updateStatus(id, ClientStatus.RESTRICTED);
     }
 }

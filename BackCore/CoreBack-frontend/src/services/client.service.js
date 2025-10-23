@@ -15,7 +15,7 @@ class ClientService {
     return http.post("/clients", data);
   }
 
-  // --- NUEVO: ACTUALIZAR DATOS CLIENTE ---
+  // --- ACTUALIZAR DATOS CLIENTE ---
   update(id, data) {
     // data debe incluir name, phone, email
     return http.put(`/clients/${id}`, data);

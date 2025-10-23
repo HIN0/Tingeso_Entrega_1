@@ -1,9 +1,8 @@
 package controllers;
 
-// ... (imports existentes)
 import entities.ClientEntity;
 import entities.LoanEntity;
-import org.springframework.format.annotation.DateTimeFormat; // Importar para formatear fechas
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 import services.ReportService;
 
@@ -41,7 +40,7 @@ public class ReportController {
         return reportService.getClientsWithLateLoans(from, to);
     }
 
-    // --- RF6.3: Sin cambios, ya requería fechas ---
+    // --- RF6.3: Herramientas más Prestadas ---
     @GetMapping("/tools/top")
     public List<Object[]> getTopTools(
             // Mantener required = true o quitarlo si @RequestParam es obligatorio por defecto

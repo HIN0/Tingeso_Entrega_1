@@ -14,7 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
 @Service
-@Validated // Habilitar validación para DTOs
+@Validated
 public class ClientService {
 
     private final ClientRepository clientRepository;
@@ -27,12 +27,10 @@ public class ClientService {
         return clientRepository.findAll();
     }
 
-    // --- OBTENER CLIENTE POR ID  ---
     public ClientEntity getClientById(Long id) {
-         return clientRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Client not found with id: " + id));
+        return clientRepository.findById(id)
+        .orElseThrow(() -> new ResourceNotFoundException("Client not found with id: " + id));
     }
-
 
     @Transactional
     public ClientEntity createClient(@Valid ClientEntity client) {
@@ -41,7 +39,7 @@ public class ClientService {
             throw new IllegalArgumentException("Client must have name, rut, phone, and email");
         }
         if (clientRepository.existsByRut(client.getRut())) {
-            // Podríamos usar una excepción personalizada aquí también
+            // Excepción personalizada
             throw new IllegalArgumentException("Client with this RUT already exists");
         }
         // Asignar estado inicial explícitamente si no viene (aunque ya lo hace)
@@ -59,17 +57,14 @@ public class ClientService {
         return clientRepository.save(client);
     }
 
-    // --- MÉTODO PARA ACTUALIZAR DATOS ---
     @Transactional
     public ClientEntity updateClientDetails(Long id, @Valid UpdateClientRequest updateRequest) {
-        ClientEntity client = getClientById(id); // Obtener cliente existente
-
+        ClientEntity client = getClientById(id);
         // Actualizar solo los campos permitidos desde el DTO
         client.setName(updateRequest.name());
         client.setPhone(updateRequest.phone());
         client.setEmail(updateRequest.email());
         // RUT y Status no se modifican aquí
-
-        return clientRepository.save(client); // Guardar los cambios
+        return clientRepository.save(client); // Guardar cambios
     }
 }

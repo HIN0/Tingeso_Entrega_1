@@ -1,8 +1,8 @@
 import axios from "axios";
-import keycloak from "./services/keycloak"; // Importar la instancia de Keycloak
+import keycloak from "./services/keycloak"; 
 
 const apiClient = axios.create({
-  baseURL: "http://localhost:8080", // Se asegura que apunte al backend
+  baseURL: "http://localhost:8080",
   headers: {
     "Content-type": "application/json",
   },

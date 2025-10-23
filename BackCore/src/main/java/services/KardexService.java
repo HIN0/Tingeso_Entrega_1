@@ -62,7 +62,6 @@ public class KardexService {
         return kardexRepository.findByTool_Id(toolId);
     }
 
-
     @Transactional(readOnly = true)
     public List<KardexEntity> getMovementsByDate(LocalDateTime start, LocalDateTime end) {
         if (start == null || end == null) {

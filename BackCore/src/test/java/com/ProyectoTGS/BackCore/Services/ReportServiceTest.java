@@ -63,7 +63,7 @@ public class ReportServiceTest {
         when(loanRepository.findByStatus(LoanStatus.ACTIVE)).thenReturn(List.of(activeLoan));
 
         // ACT
-        List<LoanEntity> result = reportService.getLoansByStatus("ACTIVE");
+        List<LoanEntity> result = reportService.getLoansByStatus("ACTIVE", null, null);
 
         // ASSERT
         assertEquals(1, result.size());
@@ -74,7 +74,7 @@ public class ReportServiceTest {
     void getLoansByStatus_ThrowsExceptionForInvalidStatus() {
         // ACT & ASSERT: Debe fallar al intentar convertir un string inválido a LoanStatus
         assertThrows(IllegalArgumentException.class, () -> {
-            reportService.getLoansByStatus("INVALID_STATUS");
+            reportService.getLoansByStatus("INVALID_STATUS", null, null);
         }, "Debe lanzar excepción si el estado no existe en el Enum.");
     }
 
@@ -92,7 +92,7 @@ public class ReportServiceTest {
         when(loanRepository.findByStatus(LoanStatus.LATE)).thenReturn(List.of(lateLoanForC1, anotherLateLoanForC1, lateLoanForC2));
 
         // ACT
-        List<ClientEntity> result = reportService.getClientsWithLateLoans();
+        List<ClientEntity> result = reportService.getClientsWithLateLoans(null, null);
 
         // ASSERT: Debe devolver 2 clientes únicos (se usa .distinct())
         assertEquals(2, result.size());

@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import LoanService from "../services/loan.service";
 
 function ReturnLoan() {
-  const { id } = useParams(); // ID del Préstamo
+  const { id } = useParams();
   const navigate = useNavigate();
   
   // Estado para guardar los detalles del préstamo (para obtener toolId y valor de reposición)

@@ -3,7 +3,7 @@ import ToolService from "../services/tool.service";
 import { useNavigate, useParams } from "react-router-dom";
 
 function EditTool() {
-  const { id } = useParams(); // Obtener el ID de la URL
+  const { id } = useParams();
   const navigate = useNavigate();
   const [tool, setTool] = useState({
     name: "",
@@ -98,7 +98,6 @@ function EditTool() {
             min="0"
           />
         </div>
-        {/* No incluir Stock ni Status en este formulario de edición */}
 
         <button type="submit" style={{ marginTop: '15px' }}>Save Changes</button>
       </form>

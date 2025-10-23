@@ -36,7 +36,6 @@ public class ToolService {
     }
 
     public ToolEntity getToolById(Long id) {
-        // CORRECCIÓN: Usar excepción personalizada
         return toolRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Tool not found with id: " + id));
     }
@@ -67,7 +66,12 @@ public class ToolService {
 
     @Transactional
     public ToolEntity updateTool(Long id, UpdateToolRequest updateRequest, UserEntity user) {
-        ToolEntity existingTool = getToolById(id); // Usa el método que lanza ResourceNotFoundException
+        ToolEntity existingTool = getToolById(id);
+
+        if (existingTool.getReplacementValue() < 1000) {
+            throw new InvalidOperationException("Cannot update a tool with replacement value less than $1000.");
+        }
+
         existingTool.setName(updateRequest.name());
         existingTool.setCategory(updateRequest.category());
         existingTool.setReplacementValue(updateRequest.replacementValue()); // @Min(1000) se valida en el DTO/Controller
@@ -76,13 +80,11 @@ public class ToolService {
 
     @Transactional
     public ToolEntity decommissionTool(Long id, UserEntity user) {
-        ToolEntity tool = getToolById(id); // Usa el método que lanza ResourceNotFoundException
+        ToolEntity tool = getToolById(id);
 
-        // CORRECCIÓN: Usar excepción personalizada
         if (tool.getStatus() == ToolStatus.DECOMMISSIONED) {
             throw new InvalidOperationException("Tool is already decommissioned.");
         }
-        // CORRECCIÓN: Usar excepción personalizada
         if (tool.getStatus() == ToolStatus.LOANED || tool.getStatus() == ToolStatus.REPAIRING) {
             throw new InvalidOperationException("Cannot decommission a tool while loaned or under repair.");
         }
@@ -100,7 +102,7 @@ public class ToolService {
 
     @Transactional
     public void decrementStockForLoan(ToolEntity tool, UserEntity user) {
-        // CORRECCIÓN: Usar excepción personalizada para estado inválido o falta de stock
+        // Usar excepción personalizada para estado inválido o falta de stock
         if (tool.getStatus() != ToolStatus.AVAILABLE || tool.getStock() == null || tool.getStock() <= 0) {
             throw new InvalidOperationException("Tool is not available or out of stock for loan.");
         }
@@ -126,21 +128,16 @@ public class ToolService {
 
     @Transactional
     public void markAsRepairing(ToolEntity tool, UserEntity user) {
-        // CORRECCIÓN: Usar excepción personalizada
         if (tool.getStatus() == ToolStatus.DECOMMISSIONED) {
             throw new InvalidOperationException("Cannot mark a decommissioned tool as repairing.");
         }
-        // Si ya está en reparación, podríamos no hacer nada o lanzar advertencia/excepción
+        // Si ya está en reparación, lanzar advertencia/excepción
         if (tool.getStatus() == ToolStatus.REPAIRING) {
-             // Podría ser un return silencioso o lanzar excepción si se considera inválido llamarlo de nuevo
-             // throw new InvalidOperationException("Tool is already marked as repairing.");
-             return; // No hacer nada si ya está en reparación
+            throw new InvalidOperationException("Tool is already marked as repairing.");
         }
 
         tool.setStatus(ToolStatus.REPAIRING); // Cambia estado
 
-        // CORRECCIÓN: Decrementar stock disponible al entrar en reparación
-        // Asumiendo que 'stock' representa las unidades disponibles para prestar.
         int quantityInRepair = 1; // Asumimos que se repara 1 unidad por llamada
         // Asegurarse de no bajar de 0 si el stock ya era 0 por alguna razón
         tool.setStock(Math.max(0, tool.getStock() - quantityInRepair));
@@ -166,7 +163,7 @@ public class ToolService {
             throw new InvalidOperationException("Quantity change cannot be zero.");
         }
 
-        // NOTA: Usar MANUAL_DECREASE para disminución y validar tipo/cantidad
+        // NOTA: Usar MANUAL_DECREASE para disminución de stock y validar tipo/cantidad
         if (quantityChange > 0 && movementType != MovementType.INCOME) {
              throw new InvalidOperationException("Positive stock adjustment requires INCOME movement type.");
         }
@@ -174,14 +171,12 @@ public class ToolService {
             throw new InvalidOperationException("Negative stock adjustment requires MANUAL_DECREASE movement type.");
         }
 
-        ToolEntity tool = getToolById(id); // Lanza ResourceNotFoundException si no existe
-        // Excepción personalizada
+        ToolEntity tool = getToolById(id);
         if (tool.getStatus() == ToolStatus.DECOMMISSIONED) {
             throw new InvalidOperationException("Cannot adjust stock for a decommissioned tool.");
         }
 
         int newStock = tool.getStock() + quantityChange;
-        // Excepción personalizada
         if (newStock < 0) {
             throw new InvalidOperationException("Stock adjustment would result in negative stock.");
         }

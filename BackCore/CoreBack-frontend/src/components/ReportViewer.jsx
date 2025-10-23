@@ -6,7 +6,7 @@ function ReportViewer() {
   const [reportType, setReportType] = useState("LATE_CLIENTS"); // Tipo de reporte activo
   const [reportData, setReportData] = useState([]); // Datos del reporte
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState(""); // Mensajes para el usuario
+  const [message, setMessage] = useState(""); 
 
   // Estado unificado para el rango de fechas
   const [dateRange, setDateRange] = useState({ from: "", to: "" });
@@ -151,7 +151,7 @@ function ReportViewer() {
           </table>
         );
       default:
-        return <p>Select a report type.</p>; // Mensaje si el tipo es inválido
+        return <p>Select a report type.</p>;
     }
   };
 
@@ -187,7 +187,6 @@ function ReportViewer() {
             disabled={!useDateFilter} // Deshabilitar si el checkbox no está marcado
           />
         </div>
-         {/* Nota: Podríamos añadir validación visual si falta una fecha cuando useDateFilter está activo */}
       </div>
 
 

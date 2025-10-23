@@ -7,8 +7,8 @@ import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 
 @SpringBootApplication(
     scanBasePackages = { 
-        "app", // Escanea el paquete base y sus subpaquetes (utils, security, config)
-        "controllers", 
+        "app",
+        "controllers",
         "services", 
         "repositories", 
         "entities" 

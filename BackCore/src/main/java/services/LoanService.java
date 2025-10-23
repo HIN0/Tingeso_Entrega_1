@@ -51,7 +51,6 @@ public class LoanService {
         return createLoan(clientId, toolId, LocalDate.now(), dueDate, user);
     }
 
-// --- Método createLoan con VALIDACIÓN REFINADA ---
     @Transactional
     public LoanEntity createLoan(Long clientId, Long toolId, LocalDate startDate, LocalDate dueDate, UserEntity user) {
         // --- Obtener Cliente y Herramienta ---
@@ -108,7 +107,6 @@ public class LoanService {
             throw new InvalidOperationException("Client already has an active or late loan for this tool.");
         }
 
-
         // --- Crear y Guardar Préstamo ---
         LoanEntity loan = LoanEntity.builder()
                 .client(client)
@@ -122,8 +120,6 @@ public class LoanService {
         toolService.decrementStockForLoan(tool, user);
         return loanRepository.save(loan);
     }
-
-    // --- Método returnLoan ACTUALIZADO ---
 
     @Transactional
     public LoanEntity returnLoan(Long loanId, Long toolId, boolean damaged, boolean irreparable, UserEntity user) {
@@ -144,7 +140,6 @@ public class LoanService {
         ToolEntity tool = loan.getTool(); // Ya tenemos la herramienta desde el préstamo
 
         // --- Validar estado del préstamo ---
-        // Excepción personalizada
         if (loan.getStatus() != LoanStatus.ACTIVE && loan.getStatus() != LoanStatus.LATE) {
             throw new InvalidOperationException("Loan is already closed and cannot be returned again.");
         }
@@ -207,7 +202,7 @@ public class LoanService {
         return savedLoan;
     }
 
-    // --- NUEVO MÉTODO PARA MARCAR COMO PAGADO Y REACTIVAR SI CORRESPONDE ---
+    // --- MÉTODO PARA MARCAR COMO PAGADO Y REACTIVAR SI CORRESPONDE ---
     @Transactional
     public ClientEntity markLoanAsPaid(Long loanId) {
         // 1. Encontrar el préstamo
@@ -219,15 +214,12 @@ public class LoanService {
             throw new InvalidOperationException("Only closed loans can be marked as paid.");
         }
         if (loan.getTotalPenalty() <= 0) {
-            // Ya está pagado (o no tenía deuda), no hacer nada o lanzar advertencia/excepción
-            // throw new InvalidOperationException("Loan has no outstanding penalty or is already considered paid.");
-             System.out.println("Loan " + loanId + " has no outstanding amount or is already paid."); // Log temporal
+             System.out.println("Loan " + loanId + " has no outstanding amount or is already paid.");
              return loan.getClient(); // Devolver el cliente sin cambios
         }
 
         // 3. Marcar como pagado (poniendo la penalidad a 0)
         loan.setTotalPenalty(0.0);
-        // Si usaras el campo 'paid': loan.setPaid(true);
         loanRepository.save(loan);
 
         // 4. Verificar si el cliente puede ser reactivado
@@ -246,8 +238,6 @@ public class LoanService {
                 return clientService.updateStatus(client.getId(), ClientStatus.ACTIVE);
             }
         }
-
-        // Si no se reactivó, devolver el cliente en su estado actual (probablemente RESTRICTED)
         return client; // Devuelve el cliente (potencialmente actualizado)
     }
 
@@ -256,7 +246,6 @@ public class LoanService {
         return loanRepository.findByStatus(LoanStatus.ACTIVE);
     }
 
-    // --- Método para obtener préstamos LATE ---
     @Transactional(readOnly = true)
     public List<LoanEntity> getLateLoans() {
         return loanRepository.findByStatus(LoanStatus.LATE);

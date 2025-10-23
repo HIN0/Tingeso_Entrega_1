@@ -51,27 +51,23 @@ public class ToolController {
         return toolService.updateTool(id, updateRequest, currentUser);
     }
 
-    // --- ENDPOINT PARA AJUSTAR STOCK ---
     @PatchMapping("/{id}/stock")
     @PreAuthorize("hasRole('ADMIN')")
     public ToolEntity adjustStock(@PathVariable Long id, @Valid @RequestBody StockAdjustmentRequest request, Authentication authentication) {
         UserEntity currentUser = securityUtils.getUserFromAuthentication(authentication);
 
-        // CORRECCIÓN: Determinar el tipo de movimiento correcto basado en el signo de quantityChange
+        // Determina el tipo de movimiento correcto basado en el signo de quantityChange
         MovementType type;
         if (request.quantityChange() > 0) {
-            type = MovementType.INCOME; // Usamos INCOME para aumentos manuales
+            type = MovementType.INCOME; // Usa INCOME para aumentos manuales
         } else if (request.quantityChange() < 0) {
-            type = MovementType.MANUAL_DECREASE; // Usamos el nuevo tipo para disminuciones
+            type = MovementType.MANUAL_DECREASE; // Usa el nuevo tipo para disminuciones
         } else {
             // El servicio ya valida quantityChange != 0, pero por si acaso
             throw new IllegalArgumentException("Quantity change cannot be zero.");
         }
-
-        // Llamar al servicio con el tipo determinado
         return toolService.adjustStock(id, request.quantityChange(), type, currentUser);
     }
-
 
     @PutMapping("/{id}/decommission")
     @PreAuthorize("hasRole('ADMIN')")

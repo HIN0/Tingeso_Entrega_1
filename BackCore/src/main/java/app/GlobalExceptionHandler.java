@@ -1,21 +1,21 @@
-package app; // O app.config, o app.exceptions
+package app;
 
 import app.exceptions.InvalidOperationException;
 import app.exceptions.ResourceNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.MethodArgumentNotValidException; // Para errores de validación
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.slf4j.Logger; // Para logging
-import org.slf4j.LoggerFactory; // Para logging
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+// Para formatear errores de validación
+import java.util.HashMap;
+import java.util.Map;
+import java.util.stream.Collectors;
 
-import java.util.HashMap; // Para formatear errores de validación
-import java.util.Map; // Para formatear errores de validación
-import java.util.stream.Collectors; // Para formatear errores de validación
 
-
-@RestControllerAdvice // Captura excepciones de todos los @RestController
+@RestControllerAdvice
 public class GlobalExceptionHandler {
 
     // Logger para registrar errores
@@ -62,11 +62,9 @@ public class GlobalExceptionHandler {
     // Manejador genérico para cualquier otra excepción (500)
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleGenericException(Exception ex) {
-        log.error("An unexpected error occurred: ", ex); // Log como error con stack trace
+        log.error("An unexpected error occurred: ", ex);
         Map<String, String> errorResponse = new HashMap<>();
         errorResponse.put("error", "Internal Server Error");
-        // No exponer detalles internos al cliente en producción por seguridad
-        // errorResponse.put("message", ex.getClass().getSimpleName() + " - " + ex.getMessage());
         errorResponse.put("message", "An unexpected error occurred. Please try again later.");
         return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
