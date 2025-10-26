@@ -40,103 +40,75 @@ INSERT INTO clients (name, rut, phone, email, status) VALUES
 -- TOOLS (Épica 1) - 30 herramientas en 5 categorías - 5 DECOMMISSIONED, 3 REPAIRING, 22 AVAILABLE
 -- ==============================================================================================================
 INSERT INTO tools (name, category, status, stock, replacement_value) VALUES
-('Sierra Caladora Inalámbrica'  ,'Carpentry'        ,'AVAILABLE'        ,4  ,30000),
-('Cepilladora Eléctrica'        ,'Carpentry'        ,'AVAILABLE'        ,3  ,55000),
-('Serrucho de Costilla'         ,'Carpentry'        ,'AVAILABLE'        ,8  ,7000),
+('Sierra Caladora Inalámbrica'  ,'Carpentry'        ,'AVAILABLE'        ,5  ,30000),
+('Cepilladora Eléctrica'        ,'Carpentry'        ,'AVAILABLE'        ,10 ,55000),
+('Serrucho de Costilla'         ,'Carpentry'        ,'AVAILABLE'        ,15 ,7000),
 ('Gubia para Madera'            ,'Carpentry'        ,'DECOMMISSIONED'   ,0  ,4000),
 ('Sargento Fijo (Grande)'       ,'Carpentry'        ,'DECOMMISSIONED'   ,0  ,15000),
 ('Lijadora Orbital'             ,'Carpentry'        ,'REPAIRING'        ,0  ,40000),
 -- =================================================================================
 ('Taladro Bosch (Heavy Duty)'   ,'Electric Tools'   ,'AVAILABLE'        ,5  ,45000),
-('Atornillador de Impacto'      ,'Electric Tools'   ,'AVAILABLE'        ,6  ,35000),
-('Multiherramienta Oscilante'   ,'Electric Tools'   ,'AVAILABLE'        ,4  ,28000),
+('Atornillador de Impacto'      ,'Electric Tools'   ,'AVAILABLE'        ,10 ,35000),
+('Multiherramienta Oscilante'   ,'Electric Tools'   ,'AVAILABLE'        ,15 ,28000),
 ('Pistola de Calor'             ,'Electric Tools'   ,'DECOMMISSIONED'   ,0  ,10000),
 ('Sierra Circular Makita'       ,'Electric Tools'   ,'REPAIRING'        ,0  ,60000),
 ('Amoladora Angular'            ,'Electric Tools'   ,'REPAIRING'        ,0  ,30000),
 -- =================================================================================
 ('Martillo Stanley (Curvo)'     ,'Hand Tools'       ,'AVAILABLE'        ,10 ,8000),
 ('Set de Llaves Allen'          ,'Hand Tools'       ,'AVAILABLE'        ,15 ,6000),
-('Nivel de Burbuja 60cm'        ,'Hand Tools'       ,'AVAILABLE'        ,7  ,9000),
-('Alicate Universal'            ,'Hand Tools'       ,'AVAILABLE'        ,12 ,5000),
+('Nivel de Burbuja 60cm'        ,'Hand Tools'       ,'AVAILABLE'        ,30 ,9000),
+('Alicate Universal'            ,'Hand Tools'       ,'AVAILABLE'        ,60 ,5000),
 ('Cinta Métrica 5m'             ,'Hand Tools'       ,'DECOMMISSIONED'   ,0  ,3000),
 ('Llave Francesa Ajustable'     ,'Hand Tools'       ,'DECOMMISSIONED'   ,0  ,5000),
 -- =================================================================================
-('Soplete de Propano'           ,'Plumbing'         ,'AVAILABLE'        ,3  ,22000),
+('Soplete de Propano'           ,'Plumbing'         ,'AVAILABLE'        ,5  ,22000),
 ('Cortatubos de Cobre'          ,'Plumbing'         ,'AVAILABLE'        ,5  ,15000),
-('Llave Stilson 18"'            ,'Plumbing'         ,'AVAILABLE'        ,4  ,18000),
-('Desatascador de Serpiente 7m' ,'Plumbing'         ,'AVAILABLE'        ,2  ,12000),
-('Bomba de Succión Manual'      ,'Plumbing'         ,'AVAILABLE'        ,3  ,11000),
+('Llave Stilson 18"'            ,'Plumbing'         ,'AVAILABLE'        ,5  ,18000),
+('Desatascador de Serpiente 7m' ,'Plumbing'         ,'AVAILABLE'        ,5  ,12000),
+('Bomba de Succión Manual'      ,'Plumbing'         ,'AVAILABLE'        ,5  ,11000),
 ('Máquina Roscadora Manual'     ,'Plumbing'         ,'DECOMMISSIONED'   ,0  ,25000),
 -- =================================================================================
-('Tijera de Podar Telescópica'  ,'Gardening'        ,'AVAILABLE'        ,4  ,15000),
-('Carretilla Reforzada'         ,'Gardening'        ,'AVAILABLE'        ,2  ,20000),
-('Pala Punta Redonda'           ,'Gardening'        ,'AVAILABLE'        ,7  ,9500),
-('Rastrillo Metálico'           ,'Gardening'        ,'AVAILABLE'        ,6  ,6000),
-('Manguera Retráctil 20m'       ,'Gardening'        ,'AVAILABLE'        ,3  ,28000),
-('Motosierra Eléctrica'         ,'Gardening'        ,'REPAIRING'        ,0  ,55000);
+('Tijera de Podar Telescópica'  ,'Gardening'        ,'AVAILABLE'        ,10  ,15000),
+('Carretilla Reforzada'         ,'Gardening'        ,'AVAILABLE'        ,10  ,20000),
+('Pala Punta Redonda'           ,'Gardening'        ,'AVAILABLE'        ,15  ,9500),
+('Rastrillo Metálico'           ,'Gardening'        ,'AVAILABLE'        ,15  ,6000),
+('Manguera Retráctil 20m'       ,'Gardening'        ,'AVAILABLE'        ,15  ,28000),
+('Motosierra Eléctrica'         ,'Gardening'        ,'REPAIRING'        ,0   ,55000);
 
 -- ==============================================================================================================
 -- LOANS (Épica 2) - 15 Préstamos: 5 ACTIVE, 7 LATE, 3 CLOSED
--- Notas: Los préstamos activos y atrasados utilizan CLIENTES ACTIVOS (IDs 8-17).
+-- Notas: Los préstamos activos y atrasados utilizan CLIENTES ACTIVOS (IDs 8-12).
 --        Los préstamos cerrados con multa utilizan CLIENTES RESTRINGIDOS (IDs 1-7, 18-20).
 -- ==============================================================================================================
-
--- ================================================================================================
--- 5 ACTIVE Loans (Vigentes - Reporte Activo)
+-- 5 ACTIVE LOANS (Vigentes - Reporte Activo)
 INSERT INTO loans (client_id, tool_id, start_date, due_date, status, total_penalty) VALUES
--- ================================================================================================
--- Cliente 8 (Manuel Castro) -> Herramienta 7 (Taladro Bosch (Heavy Duty))
-(8,  7,  CURRENT_DATE - INTERVAL '5 days',  CURRENT_DATE + INTERVAL '2 days',  'ACTIVE', 0),
--- Cliente 9 (Daniela Pino) -> Herramienta 8 (Atornillador de Impacto)
-(9,  8,  CURRENT_DATE - INTERVAL '1 days',  CURRENT_DATE + INTERVAL '6 days',  'ACTIVE', 0),
--- Cliente 10 (Vicente Araya) -> Herramienta 13 (Martillo Stanley (Curvo))
-(10, 13, CURRENT_DATE - INTERVAL '3 days',  CURRENT_DATE + INTERVAL '1 days',  'ACTIVE', 0),
--- Cliente 11 (Fernanda Soto) -> Herramienta 14 (Set de Llaves Allen)
-(11, 14, CURRENT_DATE - INTERVAL '7 days',  CURRENT_DATE + INTERVAL '5 days',  'ACTIVE', 0),
--- Cliente 12 (Maria Gonzalez) -> Herramienta 15 (Nivel de Burbuja 60cm)
-(12, 15, CURRENT_DATE - INTERVAL '1 days',  CURRENT_DATE + INTERVAL '1 days',  'ACTIVE', 0);
+(1, 1,  CURRENT_DATE - INTERVAL '5 days',  CURRENT_DATE + INTERVAL '5 days',  'ACTIVE', 0),
+(2, 2,  CURRENT_DATE - INTERVAL '5 days',  CURRENT_DATE + INTERVAL '5 days',  'ACTIVE', 0),
+(3, 3,  CURRENT_DATE - INTERVAL '5 days',  CURRENT_DATE + INTERVAL '5 days',  'ACTIVE', 0),
+(4, 7,  CURRENT_DATE - INTERVAL '5 days',  CURRENT_DATE + INTERVAL '5 days',  'ACTIVE', 0),
+(5, 8,  CURRENT_DATE - INTERVAL '5 days',  CURRENT_DATE + INTERVAL '5 days',  'ACTIVE', 0);
 
--- ================================================================================================
--- 7 LATE Loans (Atrasados - Reporte Atrasado/Clientes Atrasados)
+-- ==============================================================================================================
+-- 3 LATE LOANS (Atrasados - Reporte Atrasado/Clientes Atrasados)
 INSERT INTO loans (client_id, tool_id, start_date, due_date, status, total_penalty) VALUES
--- ================================================================================================
--- Cliente 8 (Manuel Castro) -> Herramienta 1 (Sierra Caladora Inalámbrica)
-(8,  1,  CURRENT_DATE - INTERVAL '15 days', CURRENT_DATE - INTERVAL '10 days', 'LATE', 0),
--- Cliente 9 (Daniela Pino) -> Herramienta 2 (Cepilladora Eléctrica)
-(9,  2,  CURRENT_DATE - INTERVAL '12 days', CURRENT_DATE - INTERVAL '7 days',  'LATE', 0),
--- Cliente 10 (Vicente Araya) -> Herramienta 3 (Serrucho de Costilla)
-(10, 3,  CURRENT_DATE - INTERVAL '8 days',  CURRENT_DATE - INTERVAL '3 days',  'LATE', 0),
--- Cliente 11 (Fernanda Soto) -> Herramienta 9 (Multiherramienta Oscilante)
-(11, 9,  CURRENT_DATE - INTERVAL '20 days', CURRENT_DATE - INTERVAL '1 days',  'LATE', 0),
--- Cliente 12 (Maria Gonzalez) -> Herramienta 14 (Set de Llaves Allen)
-(12, 14, CURRENT_DATE - INTERVAL '10 days', CURRENT_DATE - INTERVAL '4 days',  'LATE', 0),
--- Cliente 13 (Andrea Soto) -> Herramienta 15 (Nivel de Burbuja 60cm)
-(13, 15, CURRENT_DATE - INTERVAL '12 days', CURRENT_DATE - INTERVAL '6 days',  'LATE', 0),
--- Cliente 14 (Felipe Muñoz) -> Herramienta 1 (Sierra Caladora Inalámbrica)
-(14, 1,  CURRENT_DATE - INTERVAL '15 days', CURRENT_DATE - INTERVAL '1 days',  'LATE', 0);
+(6, 1,  CURRENT_DATE - INTERVAL '15 days', CURRENT_DATE - INTERVAL '7 days', 'LATE', 0),
+(7, 2,  CURRENT_DATE - INTERVAL '15 days', CURRENT_DATE - INTERVAL '7 days', 'LATE', 0),
+(8, 3,  CURRENT_DATE - INTERVAL '15 days', CURRENT_DATE - INTERVAL '7 days', 'LATE', 0);
 
-
--- ================================================================================================
--- 3 CLOSED Loans (Cerrados - Usados para historial de multas y Kardex)
+-- ==============================================================================================================
+-- 3 CLOSED LOANS (Cerrados - Usados para historial de multas y Kardex)
 INSERT INTO loans (client_id, tool_id, start_date, due_date, return_date, status, total_penalty) VALUES
--- ================================================================================================
-
--- Cliente 18 (Miguel Lagos - RESTRICTED): Devuelto 1 día tarde. Multa = 1 * 5000.
-(18, 13, CURRENT_DATE - INTERVAL '30 days', CURRENT_DATE - INTERVAL '20 days', CURRENT_DATE - INTERVAL '19 days', 'CLOSED', 5000), 
--- Cliente 19 (Miguel Cárcamo - RESTRICTED): Devuelto 3 días tarde. Multa = 3 * 5000 = 15000.
-(19, 14, CURRENT_DATE - INTERVAL '25 days', CURRENT_DATE - INTERVAL '15 days', CURRENT_DATE - INTERVAL '12 days', 'CLOSED', 15000),
--- Cliente 20 (Loreto Núñez - RESTRICTED): Devuelto a tiempo, con cargo por reparación. Cargo = 10000.
-(20, 15, CURRENT_DATE - INTERVAL '15 days', CURRENT_DATE - INTERVAL '5 days', CURRENT_DATE - INTERVAL '5 days', 'CLOSED', 10000); 
+-- Cliente 18 (Miguel Lagos - RESTRICTED): Devuelto 1 día tarde. Multa = (1 * 5000) + (10 * 1000).
+(18, 13, CURRENT_DATE - INTERVAL '30 days', CURRENT_DATE - INTERVAL '20 days', CURRENT_DATE - INTERVAL '19 days', 'CLOSED', 15000), 
+-- Cliente 19 (Miguel Cárcamo - RESTRICTED): Devuelto 3 días tarde. Multa = (3 * 5000) + (10 * 1000).
+(19, 14, CURRENT_DATE - INTERVAL '25 days', CURRENT_DATE - INTERVAL '15 days', CURRENT_DATE - INTERVAL '12 days', 'CLOSED', 25000),
+-- Cliente 20 (Loreto Núñez - RESTRICTED): Devuelto a tiempo, con cargo por reparación. Cargo = 10000 + (10 * 1000).
+(20, 15, CURRENT_DATE - INTERVAL '15 days', CURRENT_DATE - INTERVAL '5 days', CURRENT_DATE - INTERVAL '5 days', 'CLOSED', 20000);
 
 -- ==============================================================================================================
 -- KARDEX (Épica 5) - 5 Movimientos (USER ID 1=diego, USER ID 2=juan)
 -- ==============================================================================================================
 INSERT INTO kardex (tool_id, type, movement_date, quantity, user_id) VALUES
--- Movimientos de INGRESO de stock
-(7,  'INCOME', NOW() - INTERVAL '30 days', 5, 1),  -- Ingreso inicial de Taladro Bosch (ID 7) por diego
-(13, 'INCOME', NOW() - INTERVAL '30 days', 10, 1), -- Ingreso inicial de Martillo Stanley (ID 13) por diego
+(7,  'INCOME', NOW() - INTERVAL '10 days', 5, 1),  -- Ingreso inicial de Taladro Bosch (ID 7) por diego
+(13, 'INCOME', NOW() - INTERVAL '10 days', 10, 1); -- Ingreso inicial de Martillo Stanley (ID 13) por diego
 
--- Movimientos de PRÉSTAMO / DEVOLUCIÓN
-(7,  'LOAN',   NOW() - INTERVAL '5 days',  1, 2),  -- Préstamo de Taladro Bosch (ID 7) por juan (Loan #1)
-(13, 'RETURN', NOW() - INTERVAL '12 days', 1, 2), -- Devolución de Martillo (ID 13) por juan (Cerrado #2)
-(1,  'LOAN',   NOW() - INTERVAL '15 days', 1, 2); -- Préstamo de Sierra Caladora (ID 1) por juan (Late #1)

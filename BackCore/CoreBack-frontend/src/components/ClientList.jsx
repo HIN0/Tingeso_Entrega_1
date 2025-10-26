@@ -29,8 +29,7 @@ function ClientList() {
   }, [isAdmin, isEmployee]); // Depender de ambos roles
 
   const handleUpdateStatus = (id, currentStatus) => {
-    // ... (sin cambios)
-     setMessage(""); // Limpiar mensaje
+     setMessage("");
     const newStatus = currentStatus === "ACTIVE" ? "RESTRICTED" : "ACTIVE";
 
     if (window.confirm(`¿Seguro que quieres cambiar el estado del cliente ${id} a ${newStatus}?`)) {

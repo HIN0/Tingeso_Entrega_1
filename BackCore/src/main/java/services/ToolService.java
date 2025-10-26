@@ -10,10 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 import repositories.ToolRepository;
-// Importar las nuevas excepciones
 import app.exceptions.ResourceNotFoundException;
 import app.exceptions.InvalidOperationException;
-
 
 import java.util.List;
 
@@ -165,7 +163,7 @@ public class ToolService {
 
         // NOTA: Usar MANUAL_DECREASE para disminución de stock y validar tipo/cantidad
         if (quantityChange > 0 && movementType != MovementType.INCOME) {
-             throw new InvalidOperationException("Positive stock adjustment requires INCOME movement type.");
+            throw new InvalidOperationException("Positive stock adjustment requires INCOME movement type.");
         }
         if (quantityChange < 0 && movementType != MovementType.MANUAL_DECREASE) {
             throw new InvalidOperationException("Negative stock adjustment requires MANUAL_DECREASE movement type.");

@@ -24,12 +24,14 @@ public class KardexService {
         this.toolRepository = toolRepository;
     }
 
+    // ---------------------------------------------------------------------------------------------------------------------
     @Transactional
     public void registerMovement(ToolEntity tool, MovementType type, int quantity, UserEntity user) {
-        // Validar si la herramienta existe antes de registrar (buena práctica)
+        // 1. Validar si la herramienta existe antes de registrar
         if (tool == null || tool.getId() == null || !toolRepository.existsById(tool.getId())) {
-             throw new ResourceNotFoundException("Cannot register movement for non-existent tool.");
+            throw new ResourceNotFoundException("Cannot register movement for non-existent tool.");
         }
+        // 2. Crear y guardar el movimiento en Kardex
         KardexEntity movement = KardexEntity.builder()
                 .tool(tool)
                 .type(type)
@@ -40,21 +42,23 @@ public class KardexService {
         kardexRepository.save(movement);
     }
 
+    // ---------------------------------------------------------------------------------------------------------------------
     @Transactional(readOnly = true)
     public List<KardexEntity> getMovementsByTool(ToolEntity tool) {
         if (tool == null || tool.getId() == null) {
-             throw new IllegalArgumentException("Tool entity cannot be null.");
+            throw new IllegalArgumentException("Tool entity cannot be null.");
         }
         return kardexRepository.findByTool_Id(tool.getId());
     }
 
+    // ---------------------------------------------------------------------------------------------------------------------
     @Transactional(readOnly = true)
     public List<KardexEntity> getMovementsByToolId(Long toolId) {
-        // 1. Validar que el ID no sea nulo (aunque PathVariable usualmente lo previene)
+        // 1. Validar que el ID no sea nulo
         if (toolId == null) {
             throw new IllegalArgumentException("Tool ID cannot be null.");
         }
-        // 2. Verificar si la herramienta existe (opcional pero bueno para devolver 404 claro)
+        // 2. Verificar si la herramienta existe
         if (!toolRepository.existsById(toolId)) {
             throw new ResourceNotFoundException("Tool not found with id: " + toolId);
         }
@@ -62,14 +66,18 @@ public class KardexService {
         return kardexRepository.findByTool_Id(toolId);
     }
 
+    // ---------------------------------------------------------------------------------------------------------------------
     @Transactional(readOnly = true)
-    public List<KardexEntity> getMovementsByDate(LocalDateTime start, LocalDateTime end) {
-        if (start == null || end == null) {
+    public List<KardexEntity> getMovementsByDate(LocalDateTime startDate, LocalDateTime endDate) {
+        // 1. Validar fechas 
+        if (startDate == null || endDate == null) {
             throw new IllegalArgumentException("Start and end dates cannot be null.");
         }
-        if (end.isBefore(start)) {
-             throw new IllegalArgumentException("End date cannot be before start date.");
+        // 2. Validar que la fecha de fin no sea anterior a la de inicio
+        if (endDate.isBefore(startDate)) {
+            throw new IllegalArgumentException("End date cannot be before start date.");
         }
-        return kardexRepository.findByMovementDateBetween(start, end);
+        // 3. Consultar movimientos en el rango de fechas
+        return kardexRepository.findByMovementDateBetween(startDate, endDate);
     }
 }

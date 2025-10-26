@@ -46,35 +46,38 @@ public class LoanService {
         this.clientService = clientService;
     }
 
+    // ########################################################################################################################################################
+    // ####################################################### MÉTODOS DE PRÉSTAMO ############################################################################
+    // ########################################################################################################################################################
+    // METODO ENVOLVENTE PARA CREAR PRÉSTAMO CON FECHA DE INICIO HOY
     @Transactional
     public LoanEntity createLoan(Long clientId, Long toolId, LocalDate dueDate, UserEntity user) {
         return createLoan(clientId, toolId, LocalDate.now(), dueDate, user);
     }
 
+    // MÉTODO PRINCIPAL PARA CREAR PRÉSTAMO
     @Transactional
     public LoanEntity createLoan(Long clientId, Long toolId, LocalDate startDate, LocalDate dueDate, UserEntity user) {
-        // --- Obtener Cliente y Herramienta ---
+        // 0. Obtener Cliente y Herramienta ---
         ClientEntity client = clientRepository.findById(clientId)
                 .orElseThrow(() -> new ResourceNotFoundException("Client not found with id: " + clientId));
         ToolEntity tool = toolRepository.findById(toolId)
                 .orElseThrow(() -> new ResourceNotFoundException("Tool not found with id: " + toolId));
 
-        // --- Validaciones de Negocio ---
-
+        //  ############################################# Validaciones de Negocio #############################################
         // 1. Estado General del Cliente
         if (client.getStatus() == ClientStatus.RESTRICTED) {
             throw new InvalidOperationException("Client is restricted and cannot request loans.");
         }
 
-        // 2. Verificar préstamos ATRASADOS (LATE)
+        // 2. Verificar préstamos ATRASADOS (STATUS LATE)
         long lateLoanCount = loanRepository.countByClientAndStatus(client, LoanStatus.LATE);
         if (lateLoanCount > 0) {
             throw new InvalidOperationException("Client has " + lateLoanCount + " late loan(s) that must be returned.");
         }
 
         // 3. Verificar DEUDAS PENDIENTES (CLOSED con totalPenalty > 0)
-        List<LoanEntity> unpaidClosedLoans = loanRepository.findByClientAndStatusAndTotalPenaltyGreaterThan(
-                client, LoanStatus.CLOSED, 0.0);
+        List<LoanEntity> unpaidClosedLoans = loanRepository.findByClientAndStatusAndTotalPenaltyGreaterThan(client, LoanStatus.CLOSED, 0.0);
         if (!unpaidClosedLoans.isEmpty()) {
             throw new InvalidOperationException("Client has outstanding payments due for " + unpaidClosedLoans.size() + " previous loan(s).");
         }
@@ -121,19 +124,23 @@ public class LoanService {
         return loanRepository.save(loan);
     }
 
+    // ########################################################################################################################################################
+    // ####################################################### MÉTODOS DE DEVOLUCION ##########################################################################
+    // ########################################################################################################################################################
+    // MÉTODO ENVOLVENTE PARA DEVOLVER PRÉSTAMO CON FECHA DE DEVOLUCIÓN HOY
     @Transactional
     public LoanEntity returnLoan(Long loanId, Long toolId, boolean damaged, boolean irreparable, UserEntity user) {
         return returnLoan(loanId, toolId, damaged, irreparable, user, LocalDate.now());
     }
 
+    // MÉTODO PRINCIPAL PARA DEVOLVER PRÉSTAMO
     @Transactional
-    public LoanEntity returnLoan(Long loanId, Long toolId, boolean damaged, boolean irreparable,
-                                UserEntity user, LocalDate returnDate) {
-
-        // --- Obtener entidades ---
+    public LoanEntity returnLoan(Long loanId, Long toolId, boolean damaged, boolean irreparable, UserEntity user, LocalDate returnDate) {
+        // 0. Obtener Préstamo y Herramienta ---
         LoanEntity loan = loanRepository.findById(loanId)
-                .orElseThrow(() -> new ResourceNotFoundException("Loan not found with id: " + loanId)); // Excepción personalizada
-        // Verificar que el toolId recibido coincida con el del préstamo original
+                .orElseThrow(() -> new ResourceNotFoundException("Loan not found with id: " + loanId));
+
+        // 1. Verificar que el toolId recibido coincida con el del préstamo original
         if (!loan.getTool().getId().equals(toolId)) {
             throw new IllegalArgumentException("Tool ID (" + toolId + ") does not match the tool ID in the loan (" + loan.getTool().getId() + ").");
         }
@@ -146,20 +153,21 @@ public class LoanService {
 
         // --- Validar fecha de devolución ---
         if (returnDate == null) returnDate = LocalDate.now();
-        // Excepción personalizada (o IllegalArgumentException)
         if (returnDate.isBefore(loan.getStartDate())) {
             throw new IllegalArgumentException("Return date cannot be before the loan start date.");
         }
 
+        // -------------------------------------------------------------------------------------------------------------------------------------------------------------------
         // --- Calcular Costo de Arriendo (ÉPICA 4 / RN Épica 2) ---
-        long rentalDays = ChronoUnit.DAYS.between(loan.getStartDate(), returnDate);
+        long rentalDays = ChronoUnit.DAYS.between(loan.getStartDate(), loan.getDueDate()); // Legalmente se aplica hasta la dueDate ya que es el periodo contratado.
         // RN: tarifa mínima siempre es 1 día
         if (rentalDays < 1) {
             rentalDays = 1;
         }
         // Obtener la tarifa diaria de arriendo (Necesita método en TariffService)
-        double rentalCost = rentalDays * tariffService.getDailyRentFee(); // <- Uso getDailyRentFee()
-
+        double rentalCost = rentalDays * tariffService.getDailyRentFee();
+        
+        // -------------------------------------------------------------------------------------------------------------------------------------------------------------------
         // --- Calcular Multa por Atraso (ÉPICA 2 / 4) ---
         long delayDays = ChronoUnit.DAYS.between(loan.getDueDate(), returnDate);
         double lateFee = 0.0;
@@ -167,6 +175,7 @@ public class LoanService {
             lateFee = delayDays * tariffService.getDailyLateFee();
         }
 
+        // -------------------------------------------------------------------------------------------------------------------------------------------------------------------
         // --- Calcular Penalidades por Daño (ÉPICA 1 / 2 / 4) ---
         double damagePenalty = 0.0;
         if (damaged) {
@@ -184,8 +193,8 @@ public class LoanService {
             toolService.incrementStockForReturn(tool, user); // Esto ya registra RETURN en Kardex
         }
 
+        // -------------------------------------------------------------------------------------------------------------------------------------------------------------------
         // --- Calcular Total a Pagar y Actualizar Préstamo ---
-        // Sumamos todos los costos: arriendo + multa por atraso + penalidad por daño
         double totalAmountDue = rentalCost + lateFee + damagePenalty;
         loan.setTotalPenalty(totalAmountDue);
         loan.setReturnDate(returnDate);
@@ -202,6 +211,7 @@ public class LoanService {
         return savedLoan;
     }
 
+    // -------------------------------------------------------------------------------------------------------------------------------------
     // --- MÉTODO PARA MARCAR COMO PAGADO Y REACTIVAR SI CORRESPONDE ---
     @Transactional
     public ClientEntity markLoanAsPaid(Long loanId) {
@@ -214,8 +224,8 @@ public class LoanService {
             throw new InvalidOperationException("Only closed loans can be marked as paid.");
         }
         if (loan.getTotalPenalty() <= 0) {
-             System.out.println("Loan " + loanId + " has no outstanding amount or is already paid.");
-             return loan.getClient(); // Devolver el cliente sin cambios
+            System.out.println("Loan " + loanId + " has no outstanding amount or is already paid.");
+            return loan.getClient(); // Devolver el cliente sin cambios
         }
 
         // 3. Marcar como pagado (poniendo la penalidad a 0)
@@ -238,7 +248,15 @@ public class LoanService {
                 return clientService.updateStatus(client.getId(), ClientStatus.ACTIVE);
             }
         }
-        return client; // Devuelve el cliente (potencialmente actualizado)
+        return client;
+    }
+
+
+    // --- MÉTODO PARA BUSCAR UN PRÉSTAMO POR ID ---
+    @Transactional(readOnly = true)
+    public LoanEntity getLoanById(Long loanId) {
+        return loanRepository.findById(loanId)
+                .orElseThrow(() -> new ResourceNotFoundException("Loan not found with id: " + loanId));
     }
 
     @Transactional(readOnly = true)

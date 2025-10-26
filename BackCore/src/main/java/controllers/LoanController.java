@@ -38,6 +38,14 @@ public class LoanController {
         return active;
         }
 
+    // --- ENDPOINT GET /loans/{id} ---
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')") // Proteger el endpoint
+    public ResponseEntity<LoanEntity> getLoanById(@PathVariable Long id) {
+        LoanEntity loan = loanService.getLoanById(id);
+        return ResponseEntity.ok(loan);
+    }
+
     @PostMapping(consumes = "application/json", produces = "application/json")
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     public LoanEntity createLoanJson(@RequestBody @Valid LoanRequest req, Authentication authentication) {
