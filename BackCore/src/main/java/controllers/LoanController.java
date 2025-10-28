@@ -2,7 +2,6 @@ package controllers;
 
 import dtos.LoanRequest;
 import dtos.ReturnLoanRequest;
-import entities.ClientEntity;
 import entities.LoanEntity;
 import entities.UserEntity;
 import jakarta.validation.Valid;
@@ -67,12 +66,24 @@ public class LoanController {
             );
         }
 
+    // --- ENDPOINT PARA PAGAR (PATCH /loans/{loanId}/pay) ---
     @PatchMapping("/{loanId}/pay")
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    public ResponseEntity<ClientEntity> markLoanAsPaid(@PathVariable Long loanId) {
-        ClientEntity updatedClient = loanService.markLoanAsPaid(loanId);
-        return ResponseEntity.ok(updatedClient);
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')") // O solo ADMIN si prefieres
+    public ResponseEntity<LoanEntity> markLoanAsPaid(@PathVariable Long loanId) {
+        // Llama al método modificado que ahora devuelve LoanEntity
+        LoanEntity updatedLoan = loanService.markLoanAsPaid(loanId);
+        // Devuelve el préstamo actualizado (con estado CLOSED y penalty 0)
+        return ResponseEntity.ok(updatedLoan);
     }
+
+    // --- NUEVO ENDPOINT: Obtener préstamos pendientes de pago por ID de cliente ---
+    @GetMapping("/client/{clientId}/unpaid")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')") // Permitir a ambos roles ver las deudas
+    public ResponseEntity<List<LoanEntity>> getUnpaidLoansForClient(@PathVariable Long clientId) {
+        List<LoanEntity> unpaidLoans = loanService.getUnpaidReceivedLoansByClientId(clientId);
+        return ResponseEntity.ok(unpaidLoans);
+    }
+
 
     @PostMapping(params = {"clientId","toolId","dueDate"})
     @PreAuthorize("hasAnyRole('ADMIN', 'USER')")

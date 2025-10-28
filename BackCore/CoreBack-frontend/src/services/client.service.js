@@ -24,6 +24,13 @@ class ClientService {
   updateStatus(id, status) {
     return http.patch(`/clients/${id}/status`, { status: status });
   }
+
+  // --- NUEVA FUNCIÓN PARA INTENTAR ACTIVAR ---
+  attemptReactivation(id) {
+    // Llama al nuevo endpoint del backend
+    return http.patch(`/clients/${id}/activate`);
+    // Espera recibir ClientEntity como respuesta
+  }
 }
 
 export default new ClientService();

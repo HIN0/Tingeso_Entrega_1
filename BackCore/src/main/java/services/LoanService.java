@@ -220,45 +220,41 @@ public class LoanService {
     // ####################################################### OTROS METODOS ##################################################################################
     // ########################################################################################################################################################
     // --------------------------------------------------------------------------------------------------------------------------------------------------------
-    // --- MÉTODO PARA MARCAR COMO PAGADO Y REACTIVAR SI CORRESPONDE ---
+    // --- MÉTODO MODIFICADO PARA MARCAR COMO PAGADO (SOLO PAGA, NO ACTIVA) ---
     @Transactional
-    public ClientEntity markLoanAsPaid(Long loanId) {
+    public LoanEntity markLoanAsPaid(Long loanId) {
         // 1. Encontrar el préstamo
         LoanEntity loan = loanRepository.findById(loanId)
                 .orElseThrow(() -> new ResourceNotFoundException("Loan not found with id: " + loanId));
 
         // 2. Validar que sea un préstamo RECIBIDO y con deuda
         if (loan.getStatus() != LoanStatus.RECEIVED) {
-            throw new InvalidOperationException("Only received loans can be marked as paid.");
-        }
-        if (loan.getTotalPenalty() <= 0) {
-            System.out.println("Loan " + loanId + " has no outstanding amount or is already paid.");
-            return loan.getClient(); // Devolver el cliente sin cambios
+            throw new InvalidOperationException("Only received loans can be marked as paid. Current status: " + loan.getStatus());
         }
 
-        // 3. Marcar como pagado (poniendo la penalidad a 0)
+        // 3. Marcar como pagado (penalidad a 0) y CERRAR el préstamo
         loan.setTotalPenalty(0.0);
-        loanRepository.save(loan);
+        loan.setStatus(LoanStatus.CLOSED); // <- Importante: pasa a CLOSED
+        LoanEntity savedLoan = loanRepository.save(loan);
 
-        // 4. Verificar si el cliente puede ser reactivado
-        ClientEntity client = loan.getClient();
-        // Buscar si quedan OTROS préstamos cerrados SIN PAGAR para este cliente
-        List<LoanEntity> unpaidClosedLoans = loanRepository.findByClientAndStatusAndTotalPenaltyGreaterThan(
-                client, LoanStatus.CLOSED, 0.0);
-
-        // Buscar si quedan préstamos ATRASADOS para este cliente
-        long lateLoanCount = loanRepository.countByClientAndStatus(client, LoanStatus.LATE);
-
-        // 5. Reactivar si no hay otras deudas ni atrasos
-        if (unpaidClosedLoans.isEmpty() && lateLoanCount == 0) {
-            // Solo reactivar si actualmente está restringido
-            if(client.getStatus() == ClientStatus.RESTRICTED) {
-                return clientService.updateStatus(client.getId(), ClientStatus.ACTIVE);
-            }
-        }
-        return client;
+        // 4. NO intentamos reactivar al cliente aquí. Devolvemos el préstamo actualizado.
+        return savedLoan;
     }
 
+
+    @Transactional(readOnly = true)
+        public List<LoanEntity> getUnpaidReceivedLoansByClientId(Long clientId) {
+        // 1. Buscar el cliente para asegurarse de que existe
+        ClientEntity client = clientRepository.findById(clientId)
+                .orElseThrow(() -> new ResourceNotFoundException("Client not found with id: " + clientId));
+
+        // 2. Usar el método del repositorio para buscar préstamos RECEIVED con penalidad > 0
+        return loanRepository.findByClientAndStatusAndTotalPenaltyGreaterThan(
+                client,
+                LoanStatus.RECEIVED,
+                0.0 // Umbral de penalidad
+        );
+    }
 
     // --- MÉTODO PARA BUSCAR UN PRÉSTAMO POR ID ---
     @Transactional(readOnly = true)
