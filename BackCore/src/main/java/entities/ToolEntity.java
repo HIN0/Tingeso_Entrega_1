@@ -33,6 +33,11 @@ public class ToolEntity {
     @Min(value = 0, message = "Stock cannot be negative") 
     private Integer stock;
 
+    @NotNull(message = "In repair value cannot be null") 
+    @Min(value = 0, message = "In repair value cannot be negative")
+    @Column(name = "in_repair")
+    private Integer inRepair;
+
     @NotNull(message = "Replacement value cannot be null") 
     @Min(value = 1000, message = "Replacement value cannot be negative")
     @Column(name = "replacement_value")

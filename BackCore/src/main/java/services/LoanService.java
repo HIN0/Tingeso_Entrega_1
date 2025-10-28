@@ -12,6 +12,7 @@ import repositories.ClientRepository;
 import repositories.ToolRepository;
 import app.exceptions.InvalidOperationException; 
 import app.exceptions.ResourceNotFoundException;
+
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
@@ -27,7 +28,6 @@ public class LoanService {
     private final ToolService toolService;
     private final TariffService tariffService;
     private final ClientService clientService;
-    private final KardexService kardexService;
 
     // --- Constructor ---
     public LoanService(LoanRepository loanRepository,
@@ -41,7 +41,6 @@ public class LoanService {
         this.clientRepository = clientRepository;
         this.toolRepository = toolRepository;
         this.toolService = toolService;
-        this.kardexService = kardexService;
         this.tariffService = tariffService;
         this.clientService = clientService;
     }
@@ -159,7 +158,7 @@ public class LoanService {
 
         // -------------------------------------------------------------------------------------------------------------------------------------------------------------------
         // --- Calcular Costo de Arriendo (ÉPICA 4 / RN Épica 2) ---
-        long rentalDays = ChronoUnit.DAYS.between(loan.getStartDate(), loan.getDueDate()); // Legalmente se aplica hasta la dueDate ya que es el periodo contratado.
+        long rentalDays = ChronoUnit.DAYS.between(loan.getStartDate(), returnDate);
         // RN: tarifa mínima siempre es 1 día
         if (rentalDays < 1) {
             rentalDays = 1;
@@ -195,23 +194,32 @@ public class LoanService {
 
         // -------------------------------------------------------------------------------------------------------------------------------------------------------------------
         // --- Calcular Total a Pagar y Actualizar Préstamo ---
-        double totalAmountDue = rentalCost + lateFee + damagePenalty;
-        loan.setTotalPenalty(totalAmountDue);
+        boolean ON_TIME = returnDate.isBefore(loan.getDueDate()) || returnDate.isEqual(loan.getDueDate());
+        boolean DELAYED = returnDate.isAfter(loan.getDueDate());
+        
+        if (ON_TIME) {
+            double totalAmountDue = rentalCost + damagePenalty;
+            loan.setTotalPenalty(totalAmountDue);
+        } else if (DELAYED) {
+            double totalAmountDue = rentalCost + lateFee + damagePenalty;
+            loan.setTotalPenalty(totalAmountDue);
+        }
+
         loan.setReturnDate(returnDate);
-        loan.setStatus(LoanStatus.CLOSED); // Cerrar el préstamo
+        loan.setStatus(LoanStatus.RECEIVED); // Se recibe la herramienta, pendiente de pago
 
         // --- Guardar Préstamo ---
         LoanEntity savedLoan = loanRepository.save(loan);
+        clientService.updateStatus(loan.getClient().getId(), ClientStatus.RESTRICTED); // Cliente queda RESTRINGIDO hasta pagar
 
-        // --- Restringir Cliente si hay Monto Pendiente (RN Épica 2 / 3) ---
-        // Si el monto total es mayor a cero, se asume que queda pendiente y se restringe.
-        if (totalAmountDue > 0.0) {
-            clientService.updateStatus(loan.getClient().getId(), ClientStatus.RESTRICTED);
-        }
+        // Devolver el préstamo actualizado
         return savedLoan;
     }
 
-    // -------------------------------------------------------------------------------------------------------------------------------------
+    // ########################################################################################################################################################
+    // ####################################################### OTROS METODOS ##################################################################################
+    // ########################################################################################################################################################
+    // --------------------------------------------------------------------------------------------------------------------------------------------------------
     // --- MÉTODO PARA MARCAR COMO PAGADO Y REACTIVAR SI CORRESPONDE ---
     @Transactional
     public ClientEntity markLoanAsPaid(Long loanId) {
@@ -219,9 +227,9 @@ public class LoanService {
         LoanEntity loan = loanRepository.findById(loanId)
                 .orElseThrow(() -> new ResourceNotFoundException("Loan not found with id: " + loanId));
 
-        // 2. Validar que sea un préstamo cerrado y con deuda
-        if (loan.getStatus() != LoanStatus.CLOSED) {
-            throw new InvalidOperationException("Only closed loans can be marked as paid.");
+        // 2. Validar que sea un préstamo RECIBIDO y con deuda
+        if (loan.getStatus() != LoanStatus.RECEIVED) {
+            throw new InvalidOperationException("Only received loans can be marked as paid.");
         }
         if (loan.getTotalPenalty() <= 0) {
             System.out.println("Loan " + loanId + " has no outstanding amount or is already paid.");
