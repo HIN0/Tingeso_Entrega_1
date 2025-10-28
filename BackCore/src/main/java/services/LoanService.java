@@ -156,7 +156,7 @@ public class LoanService {
             throw new IllegalArgumentException("Return date cannot be before the loan start date.");
         }
 
-        // -------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        // ----------------------------------------------------------------------------------------------------------------------------------------------------
         // --- Calcular Costo de Arriendo (ÉPICA 4 / RN Épica 2) ---
         long rentalDays = ChronoUnit.DAYS.between(loan.getStartDate(), loan.getDueDate());
         // RN: tarifa mínima siempre es 1 día
@@ -166,7 +166,7 @@ public class LoanService {
         // Obtener la tarifa diaria de arriendo (Necesita método en TariffService)
         double rentalCost = rentalDays * tariffService.getDailyRentFee();
         
-        // -------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        // ----------------------------------------------------------------------------------------------------------------------------------------------------
         // --- Calcular Multa por Atraso (ÉPICA 2 / 4) ---
         long delayDays = ChronoUnit.DAYS.between(loan.getDueDate(), returnDate);
         double lateFee = 0.0;
@@ -174,7 +174,7 @@ public class LoanService {
             lateFee = delayDays * tariffService.getDailyLateFee();
         }
 
-        // -------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        // ----------------------------------------------------------------------------------------------------------------------------------------------------
         // --- Calcular Penalidades por Daño (ÉPICA 1 / 2 / 4) ---
         double damagePenalty = 0.0;
         if (damaged) {
@@ -192,7 +192,7 @@ public class LoanService {
             toolService.incrementStockForReturn(tool, user); // Esto ya registra RETURN en Kardex
         }
 
-        // -------------------------------------------------------------------------------------------------------------------------------------------------------------------
+        // ----------------------------------------------------------------------------------------------------------------------------------------------------
         // --- Calcular Total a Pagar y Actualizar Préstamo ---
         boolean ON_TIME = returnDate.isBefore(loan.getDueDate()) || returnDate.isEqual(loan.getDueDate());
         boolean DELAYED = returnDate.isAfter(loan.getDueDate());

@@ -43,6 +43,10 @@ public class ToolService {
     @Transactional
     public ToolEntity createTool(@Valid ToolEntity tool, UserEntity user) {
 
+        // --- Asegurar valor default para inRepair ANTES de guardar ---
+        if (tool.getInRepair() == null) {
+            tool.setInRepair(0); // Establecer 0 si viene nulo
+        }
         // Asignación de estado inicial (si es null)
         if (tool.getStatus() == null) {
             // Si stock > 0 -> AVAILABLE, si stock == 0 -> AVAILABLE (según @Min(0) para cargar datos iniciales pero eso frena con el frontend)
@@ -51,10 +55,10 @@ public class ToolService {
              // Forzar AVAILABLE si hay stock pero se envió otro estado (ej. LOANED)
             tool.setStatus(ToolStatus.AVAILABLE);
         }
+
+        // ------ Guardar herramienta y registrar movimiento en Kardex ------
         // Si se envía stock 0 y estado AVAILABLE, es válido.
-
         ToolEntity saved = toolRepository.save(tool);
-
         // Registrar movimiento en Kardex solo si el stock inicial es mayor que 0
         if (saved.getStock() > 0) {
             kardexService.registerMovement(saved, MovementType.INCOME, saved.getStock(), user);
