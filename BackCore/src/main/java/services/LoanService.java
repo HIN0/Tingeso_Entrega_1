@@ -75,10 +75,10 @@ public class LoanService {
             throw new InvalidOperationException("Client has " + lateLoanCount + " late loan(s) that must be returned.");
         }
 
-        // 3. Verificar DEUDAS PENDIENTES (CLOSED con totalPenalty > 0)
-        List<LoanEntity> unpaidClosedLoans = loanRepository.findByClientAndStatusAndTotalPenaltyGreaterThan(client, LoanStatus.CLOSED, 0.0);
-        if (!unpaidClosedLoans.isEmpty()) {
-            throw new InvalidOperationException("Client has outstanding payments due for " + unpaidClosedLoans.size() + " previous loan(s).");
+        // 3. Verificar DEUDAS PENDIENTES (STATUS RECEIVED con totalPenalty > 0)
+        List<LoanEntity> unpaidReceivedLoans = loanRepository.findByClientAndStatusAndTotalPenaltyGreaterThan(client, LoanStatus.RECEIVED, 0.0);
+        if (!unpaidReceivedLoans.isEmpty()) {
+            throw new InvalidOperationException("Client has outstanding payments due for " + unpaidReceivedLoans.size() + " previous loan(s).");
         }
 
         // 4. Disponibilidad de Herramienta
@@ -158,7 +158,7 @@ public class LoanService {
 
         // -------------------------------------------------------------------------------------------------------------------------------------------------------------------
         // --- Calcular Costo de Arriendo (ÉPICA 4 / RN Épica 2) ---
-        long rentalDays = ChronoUnit.DAYS.between(loan.getStartDate(), returnDate);
+        long rentalDays = ChronoUnit.DAYS.between(loan.getStartDate(), loan.getDueDate());
         // RN: tarifa mínima siempre es 1 día
         if (rentalDays < 1) {
             rentalDays = 1;
