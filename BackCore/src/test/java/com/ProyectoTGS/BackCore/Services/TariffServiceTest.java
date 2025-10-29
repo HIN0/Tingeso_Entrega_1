@@ -13,6 +13,7 @@ import services.TariffService;
 import java.util.Collections;
 import java.util.List;
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -28,7 +29,7 @@ public class TariffServiceTest {
 
     @BeforeEach
     void setUp() {
-        // Simular la tarifa existente en la base de datos
+        // Simular la tarifa 
         currentTariff = TariffEntity.builder()
                 .id(1L)
                 .dailyRentFee(5000)
@@ -89,5 +90,45 @@ public class TariffServiceTest {
         assertEquals(6000, result.getDailyRentFee());
         assertEquals(3000, result.getDailyLateFee());
         verify(tariffRepository, times(1)).save(currentTariff);
+    }
+
+// =======================================================================
+    // MÉTODOS GETTERS ESPECÍFICOS (por completitud)
+    // =======================================================================
+
+    @Test
+    void getDailyLateFee_Success() {
+        // ARRANGE: Simular que getTariff() funciona
+        when(tariffRepository.findAll()).thenReturn(List.of(currentTariff));
+
+        // ACT
+        double fee = tariffService.getDailyLateFee();
+
+        // ASSERT
+        assertEquals(2000, fee); // Valor del setUp
+    }
+
+    @Test
+    void getDailyRentFee_Success() {
+        // ARRANGE: Simular que getTariff() funciona
+        when(tariffRepository.findAll()).thenReturn(List.of(currentTariff));
+
+        // ACT
+        double fee = tariffService.getDailyRentFee();
+
+        // ASSERT
+        assertEquals(5000, fee); // Valor del setUp
+    }
+
+    @Test
+    void getRepairFee_Success() {
+        // ARRANGE: Simular que getTariff() funciona
+        when(tariffRepository.findAll()).thenReturn(List.of(currentTariff));
+
+        // ACT
+        double fee = tariffService.getRepairFee();
+
+        // ASSERT
+        assertEquals(1500, fee); // Valor del setUp
     }
 }

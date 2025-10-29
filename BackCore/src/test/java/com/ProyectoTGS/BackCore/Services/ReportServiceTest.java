@@ -20,6 +20,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -144,5 +145,109 @@ public class ReportServiceTest {
         // ASSERT
         assertEquals(1, result.size());
         assertEquals(ClientStatus.RESTRICTED, result.get(0).getStatus());
+    }
+
+// =======================================================================
+    // MÉTODO: getLoansByStatus (con filtro de fecha)
+    // =======================================================================
+
+    @Test
+    void getLoansByStatus_WithDateFilter_Success() {
+        // ARRANGE
+        LocalDate from = LocalDate.of(2025, 1, 1);
+        LocalDate to = LocalDate.of(2025, 1, 31);
+        LoanEntity loan = LoanEntity.builder().status(LoanStatus.ACTIVE).startDate(from.plusDays(5)).build();
+        when(loanRepository.findByStatusAndStartDateBetween(LoanStatus.ACTIVE, from, to)).thenReturn(List.of(loan));
+
+        // ACT
+        List<LoanEntity> result = reportService.getLoansByStatus("ACTIVE", from, to);
+
+        // ASSERT
+        assertEquals(1, result.size());
+        verify(loanRepository, times(1)).findByStatusAndStartDateBetween(LoanStatus.ACTIVE, from, to);
+        verify(loanRepository, never()).findByStatus(any()); // Verifica que NO se llamó al método sin filtro
+    }
+
+    @Test
+    void getLoansByStatus_WithDateFilter_FailsIfFromAfterTo() {
+        // ARRANGE
+        LocalDate from = LocalDate.of(2025, 1, 31);
+        LocalDate to = LocalDate.of(2025, 1, 1);
+
+        // ACT & ASSERT
+        assertThrows(IllegalArgumentException.class, () -> {
+            reportService.getLoansByStatus("ACTIVE", from, to);
+        });
+        verify(loanRepository, never()).findByStatusAndStartDateBetween(any(), any(), any());
+    }
+
+    // =======================================================================
+    // MÉTODO: getClientsWithLateLoans (con filtro de fecha)
+    // =======================================================================
+
+     @Test
+    void getClientsWithLateLoans_WithDateFilter_Success() {
+        // ARRANGE
+        LocalDate from = LocalDate.of(2025, 2, 1);
+        LocalDate to = LocalDate.of(2025, 2, 28);
+        when(loanRepository.findDistinctClientsByStatusAndStartDateBetween(LoanStatus.LATE, from, to))
+                .thenReturn(List.of(client1)); // Simular que solo client1 cumple
+
+        // ACT
+        List<ClientEntity> result = reportService.getClientsWithLateLoans(from, to);
+
+        // ASSERT
+        assertEquals(1, result.size());
+        assertEquals(client1.getId(), result.get(0).getId());
+        verify(loanRepository, times(1)).findDistinctClientsByStatusAndStartDateBetween(LoanStatus.LATE, from, to);
+        verify(loanRepository, never()).findByStatus(LoanStatus.LATE); // Verifica que no se usó el método sin filtro
+    }
+
+     @Test
+    void getClientsWithLateLoans_WithDateFilter_FailsIfFromAfterTo() {
+        // ARRANGE
+        LocalDate from = LocalDate.of(2025, 2, 28);
+        LocalDate to = LocalDate.of(2025, 2, 1);
+
+        // ACT & ASSERT
+        assertThrows(IllegalArgumentException.class, () -> {
+            reportService.getClientsWithLateLoans(from, to);
+        });
+        verify(loanRepository, never()).findDistinctClientsByStatusAndStartDateBetween(any(), any(), any());
+    }
+
+    // =======================================================================
+    // MÉTODO: getTopTools (validaciones de fecha)
+    // =======================================================================
+
+    @Test
+    void getTopTools_FailsIfFromDateIsNull() {
+         // ACT & ASSERT
+        assertThrows(IllegalArgumentException.class, () -> {
+            reportService.getTopTools(null, LocalDate.now());
+        });
+        verify(loanRepository, never()).findTopToolsByDateRange(any(), any());
+    }
+
+    @Test
+    void getTopTools_FailsIfToDateIsNull() {
+        // ACT & ASSERT
+        assertThrows(IllegalArgumentException.class, () -> {
+            reportService.getTopTools(LocalDate.now(), null);
+        });
+        verify(loanRepository, never()).findTopToolsByDateRange(any(), any());
+    }
+
+    @Test
+    void getTopTools_FailsIfFromDateAfterToDate() {
+        // ARRANGE
+        LocalDate from = LocalDate.of(2025, 1, 31);
+        LocalDate to = LocalDate.of(2025, 1, 1);
+
+        // ACT & ASSERT
+        assertThrows(IllegalArgumentException.class, () -> {
+            reportService.getTopTools(from, to);
+        });
+        verify(loanRepository, never()).findTopToolsByDateRange(any(), any());
     }
 }
