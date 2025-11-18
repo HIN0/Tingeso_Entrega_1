@@ -48,9 +48,9 @@ public class ReportService {
                     .toList();
         } else {
             // Si hay fechas, llama al nuevo método del repositorio
-             if (from.isAfter(to)) {
-                 throw new IllegalArgumentException("Start date cannot be after end date.");
-             }
+            if (from.isAfter(to)) {
+                throw new IllegalArgumentException("Start date cannot be after end date.");
+            }
             return loanRepository.findDistinctClientsByStatusAndStartDateBetween(LoanStatus.LATE, from, to);
         }
     }
@@ -58,11 +58,11 @@ public class ReportService {
     // --- RF6.3: Ranking (sin cambios, ya acepta fechas) ---
     public List<Object[]> getTopTools(LocalDate from, LocalDate to) {
         if (from == null || to == null) {
-             throw new IllegalArgumentException("Date range is required for Top Tools report.");
+            throw new IllegalArgumentException("Date range is required for Top Tools report.");
         }
-         if (from.isAfter(to)) {
-             throw new IllegalArgumentException("Start date cannot be after end date.");
-         }
+        if (from.isAfter(to)) {
+            throw new IllegalArgumentException("Start date cannot be after end date.");
+        }
         return loanRepository.findTopToolsByDateRange(from, to);
     }
 

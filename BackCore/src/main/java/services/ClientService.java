@@ -70,11 +70,10 @@ public class ClientService {
         client.setName(updateRequest.name());
         client.setPhone(updateRequest.phone());
         client.setEmail(updateRequest.email());
-        // RUT y Status no se modifican aquí
+        // RUT y Status no se modifican aquí segun RF 3.2
         return clientRepository.save(client); // Guardar cambios
     }
 
-// --- NUEVO MÉTODO PARA INTENTAR REACTIVAR UN CLIENTE ---
     @Transactional
     public ClientEntity attemptClientReactivation(Long clientId) {
         // 1. Obtener el cliente
@@ -84,7 +83,6 @@ public class ClientService {
         if (client.getStatus() == ClientStatus.ACTIVE) {
             System.out.println("Client " + clientId + " is already active.");
             return client;
-            // O podrías lanzar: throw new InvalidOperationException("Client is already active.");
         }
 
         // 3. Verificar si tiene préstamos ATRASADOS (LATE)

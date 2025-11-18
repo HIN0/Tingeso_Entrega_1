@@ -31,20 +31,24 @@ public class SecurityConfig {
                 
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() 
                 
-                // CORRECCIÓN CLAVE: Permite a USER y ADMIN leer las herramientas (GET)
-                .requestMatchers(HttpMethod.GET, "/tools/**").hasAnyRole("ADMIN", "USER")
+                // Permite a USER y ADMIN leer las herramientas con "GET"
                 .requestMatchers(HttpMethod.GET, "/loans/**").hasAnyRole("ADMIN", "USER") 
-                
-                // Las demás operaciones de /tools (POST/PUT/DELETE) siguen siendo solo para ADMIN
-                .requestMatchers("/tools/**").hasRole("ADMIN") 
+                .requestMatchers(HttpMethod.GET, "/tools/**").hasAnyRole("ADMIN", "USER")
+                                
+                // Regla de Escritura: Explícita para los métodos de modificación del ADMIN
+                .requestMatchers(HttpMethod.POST, "/tools/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/tools/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PATCH, "/tools/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/tools/**").hasRole("ADMIN")
 
                 // Rutas que requieren solo ADMIN
                 .requestMatchers("/tariffs/**").hasRole("ADMIN")
                 .requestMatchers("/clients/**").hasRole("ADMIN") 
                 
-                // Rutas que requieren ADMIN o USER (Préstamos/Reportes)
+                // Rutas que requieren ADMIN o USER (Movimientos Del Kardex, Devoluciones, Préstamos y Reportes)
                 .requestMatchers("/kardex/**").hasAnyRole("ADMIN", "USER")
-                .requestMatchers("/loans/**", "/returns/**").hasAnyRole("ADMIN", "USER")
+                .requestMatchers("/returns/**").hasAnyRole("ADMIN", "USER")
+                .requestMatchers("/loans/**").hasAnyRole("ADMIN", "USER")
                 .requestMatchers("/reports/**").hasAnyRole("ADMIN", "USER")
                 
                 .anyRequest().authenticated()

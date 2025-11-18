@@ -37,12 +37,18 @@ public class LoanController {
         return active;
         }
 
-    // --- ENDPOINT GET /loans/{id} ---
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')") // Proteger el endpoint
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
     public ResponseEntity<LoanEntity> getLoanById(@PathVariable Long id) {
         LoanEntity loan = loanService.getLoanById(id);
         return ResponseEntity.ok(loan);
+    }
+
+    @GetMapping("/client/{clientId}/unpaid")
+    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    public ResponseEntity<List<LoanEntity>> getUnpaidLoansForClient(@PathVariable Long clientId) {
+        List<LoanEntity> unpaidLoans = loanService.getUnpaidReceivedLoansByClientId(clientId);
+        return ResponseEntity.ok(unpaidLoans);
     }
 
     @PostMapping(consumes = "application/json", produces = "application/json")
@@ -66,44 +72,11 @@ public class LoanController {
             );
         }
 
-    // --- ENDPOINT PARA PAGAR (PATCH /loans/{loanId}/pay) ---
     @PatchMapping("/{loanId}/pay")
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')") // O solo ADMIN si prefieres
+    @PreAuthorize("hasAnyRole('ADMIN')")
     public ResponseEntity<LoanEntity> markLoanAsPaid(@PathVariable Long loanId) {
-        // Llama al método modificado que ahora devuelve LoanEntity
         LoanEntity updatedLoan = loanService.markLoanAsPaid(loanId);
         // Devuelve el préstamo actualizado (con estado CLOSED y penalty 0)
         return ResponseEntity.ok(updatedLoan);
     }
-
-    // --- NUEVO ENDPOINT: Obtener préstamos pendientes de pago por ID de cliente ---
-    @GetMapping("/client/{clientId}/unpaid")
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')") // Permitir a ambos roles ver las deudas
-    public ResponseEntity<List<LoanEntity>> getUnpaidLoansForClient(@PathVariable Long clientId) {
-        List<LoanEntity> unpaidLoans = loanService.getUnpaidReceivedLoansByClientId(clientId);
-        return ResponseEntity.ok(unpaidLoans);
-    }
-
-
-    @PostMapping(params = {"clientId","toolId","dueDate"})
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    public LoanEntity createLoan(@RequestParam Long clientId,
-                                @RequestParam Long toolId,
-                                @RequestParam String dueDate,
-                                Authentication authentication) {
-        UserEntity currentUser = securityUtils.getUserFromAuthentication(authentication);
-        return loanService.createLoan(clientId, toolId, java.time.LocalDate.parse(dueDate), currentUser);
-    }
-
-    @PutMapping(path = "/{id}/return", params = {"toolId","damaged","irreparable"})
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
-    public LoanEntity returnLoan(@PathVariable Long id,
-                                @RequestParam Long toolId,
-                                @RequestParam boolean damaged,
-                                @RequestParam boolean irreparable,
-                                Authentication authentication) {
-        UserEntity currentUser = securityUtils.getUserFromAuthentication(authentication);
-        return loanService.returnLoan(id, toolId, damaged, irreparable, currentUser);
-    }
-
 }

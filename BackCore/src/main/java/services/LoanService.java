@@ -256,7 +256,6 @@ public class LoanService {
         );
     }
 
-    // --- MÉTODO PARA BUSCAR UN PRÉSTAMO POR ID ---
     @Transactional(readOnly = true)
     public LoanEntity getLoanById(Long loanId) {
         return loanRepository.findById(loanId)

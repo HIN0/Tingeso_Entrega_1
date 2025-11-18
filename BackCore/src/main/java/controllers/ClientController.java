@@ -59,13 +59,10 @@ public class ClientController {
         }
     }
 
-    // --- ENDPOINT PARA INTENTAR REACTIVACIÓN ---
     @PatchMapping("/{id}/activate")
-    // @PreAuthorize("hasAnyRole('ADMIN', 'USER')") // Podrías permitir a USER si lo necesitas
     public ResponseEntity<ClientEntity> attemptReactivation(@PathVariable Long id) {
-        // Llama al nuevo método en ClientService
         ClientEntity potentiallyUpdatedClient = clientService.attemptClientReactivation(id);
-        // Devuelve el estado final del cliente (puede seguir RESTRICTED si falló, o ACTIVE si tuvo éxito)
+        // Devuelve el estado final del cliente: puede seguir RESTRICTED si falló, o ACTIVE si tuvo éxito
         return ResponseEntity.ok(potentiallyUpdatedClient);
     }
 }
