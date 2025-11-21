@@ -2,6 +2,22 @@ import { useState } from "react";
 import ToolService from "../services/tool.service";
 import { useNavigate } from "react-router-dom";
 
+// --- FUNCIÓN AUXILIAR PARA DAR FORMATO A LOS ERRORES DE VALIDACIÓN ---
+const formatValidationErrors = (errors) => {
+    if (!errors || typeof errors !== 'object') {
+        return "Validation failed with an unknown error.";
+    }
+    let errorString = "Validation Errors:\n";
+    for (const field in errors) {
+        // Formatea el nombre del campo para que sea más legible (ej: "replacementValue" -> "Replacement Value")
+        const formattedField = field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+        errorString += `• ${formattedField}: ${errors[field]}\n`;
+    }
+    return errorString.trim();
+};
+// ----------------------------------------------------------------------
+
+
 function AddTool() {
   const [tool, setTool] = useState({
     name: "",
@@ -43,9 +59,21 @@ function AddTool() {
       })
       .catch((err) => {
         console.error("Error creating tool:", err);
-        const errorMsg = err.response?.data?.message || err.response?.data?.fieldErrors
-                         ? JSON.stringify(err.response.data.fieldErrors) // Mostrar errores de validación si existen
-                         : err.response?.data || "Failed to create tool. Please check the data.";
+        
+        const backendErrors = err.response?.data?.fieldErrors;
+        let errorMsg;
+        
+        if (backendErrors) {
+            // --- LÓGICA CORREGIDA: Usar la función para formatear errores ---
+            errorMsg = formatValidationErrors(backendErrors);
+        } else {
+            // Lógica para otros tipos de errores (Bad Request, Internal Server, etc.)
+            errorMsg = err.response?.data?.message || 
+                       err.response?.data?.error || 
+                       err.response?.data || 
+                       "Failed to create tool. Please check the data.";
+        }
+        
         setError(errorMsg);
       });
   };
@@ -53,7 +81,12 @@ function AddTool() {
   return (
     <div style={{ padding: 16 }}>
       <h2>Add Tool</h2>
-      {error && <p style={{ color: 'red' }}>Error: {error}</p>}
+      {/* Renderizado mejorado para mostrar los errores con saltos de línea */}
+      {error && (
+        <div style={{ color: 'red', whiteSpace: 'pre-wrap', border: '1px solid red', padding: '10px', marginBottom: '15px' }}>
+          <strong>Error:</strong><br/>{error}
+        </div>
+      )}
       <form onSubmit={handleSubmit}>
         {/* ... Inputs para name, category ... */}
          <div>
@@ -98,11 +131,11 @@ function AddTool() {
             value={tool.replacementValue}
             onChange={handleChange}
             required
-             min="1000" // Mantener la validación del backend
+            min="1000" // Mantener la validación del backend
           />
         </div>
 
-        {/* 4. OPCIONAL: Añadir un input para 'inRepair' si el usuario debe definirlo.
+        {/* 4. PUEDE SER QUIZA: Añadir un input para 'inRepair' si el usuario debe definirlo.
            Si siempre es 0 al crear, no necesitas un input, solo inicializarlo en el estado. */}
         {/*
         <div>
