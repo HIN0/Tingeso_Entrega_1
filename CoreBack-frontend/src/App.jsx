@@ -12,7 +12,7 @@ import ReportViewer from "./components/ReportViewer";
 import EditTool from "./components/EditTool";
 import AddClient from "./components/AddClient"; 
 import EditClient from "./components/EditClient";
-import KardexViewer from "./components/kardexViewer";
+import KardexViewer from "./components/KardexViewer";
 
 function RequireAuth({ children, roles }) {
   const { keycloak, initialized } = useKeycloak();
