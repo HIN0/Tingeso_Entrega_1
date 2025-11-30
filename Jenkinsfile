@@ -21,7 +21,7 @@ pipeline {
             steps {
                 dir('BackCore') {
                     sh 'chmod +x mvnw'
-                    sh './mvnw clean test'
+                    sh './mvnw clean package'
                 }
             }
         }
