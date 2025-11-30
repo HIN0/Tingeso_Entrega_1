@@ -3,12 +3,9 @@ pipeline {
     
     environment {
         // --- CONFIGURACIÓN ---
-        DOCKER_USER = 'izkybin' 
-        
-        // El ID de credencial (Paso 1)
+        DOCKER_USER = 'izkybin'
         DOCKER_CRED_ID = '41f8f2cae91743e797fcf746c808f624'
         
-        // Nombres de las imágenes
         IMAGE_BACK = "${DOCKER_USER}/toolrent-backend"
         IMAGE_FRONT = "${DOCKER_USER}/toolrent-frontend"
     }
@@ -16,15 +13,13 @@ pipeline {
     stages {
         stage('Descargar Código') {
             steps {
-                // Descarga el código fresco desde GitHub
                 checkout scm
             }
         }
 
         stage('Test Backend (JUnit)') {
             steps {
-                dir('backend') {
-                    // Damos permisos al ejecutable de Maven y testeamos
+                dir('BackCore') {
                     sh 'chmod +x mvnw'
                     sh './mvnw clean test'
                 }
@@ -33,10 +28,9 @@ pipeline {
 
         stage('Build & Push Backend') {
             steps {
-                dir('backend') {
+                dir('BackCore') {
                     script {
                         docker.withRegistry('', DOCKER_CRED_ID) {
-                            // Crea la imagen y la sube
                             def app = docker.build("${IMAGE_BACK}:latest")
                             app.push()
                         }
@@ -47,10 +41,9 @@ pipeline {
 
         stage('Build & Push Frontend') {
             steps {
-                dir('frontend') {
+                dir('CoreBack-frontend') {
                     script {
                         docker.withRegistry('', DOCKER_CRED_ID) {
-                            // Crea la imagen y la sube
                             def app = docker.build("${IMAGE_FRONT}:latest")
                             app.push()
                         }
