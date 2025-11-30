@@ -1,0 +1,58 @@
+services:
+  # 1. Base de Datos (PostgreSQL)
+  db:
+    image: postgres:15-alpine
+    container_name: toolrent-db
+    environment:
+      - POSTGRES_DB=toolrent
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    networks:
+      - toolrent-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # 2. Backend (Spring Boot) - Descarga la imagen de DockerHub
+  backend:
+    image: izkybin/toolrent-backend:latest
+    container_name: toolrent-backend
+    ports:
+      - "8080:8080"
+    environment:
+      # Sobrescribimos la URL para que apunte al contenedor 'db' en vez de localhost
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/toolrent
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      # Configuraciones de JPA para que cree las tablas automáticamente
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=update
+      - SPRING_JPA_SHOW_SQL=true
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - toolrent-net
+
+  # 3. Frontend (React + Nginx) - Descarga la imagen de DockerHub
+  frontend:
+    image: izkybin/toolrent-frontend:latest
+    container_name: toolrent-frontend
+    ports:
+      - "80:80" # Acceso directo por localhost (sin puerto)
+    depends_on:
+      - backend
+    networks:
+      - toolrent-net
+
+volumes:
+  db_data:
+
+networks:
+  toolrent-net:
+    driver: bridge
