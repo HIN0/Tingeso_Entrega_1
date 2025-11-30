@@ -4,7 +4,7 @@ pipeline {
     environment {
         // --- CONFIGURACIÓN ---
         DOCKER_USER = 'izkybin'
-        DOCKER_CRED_ID = '41f8f2cae91743e797fcf746c808f624'
+        DOCKER_CRED_ID = 'dockerhub-id'
         
         IMAGE_BACK = "${DOCKER_USER}/toolrent-backend"
         IMAGE_FRONT = "${DOCKER_USER}/toolrent-frontend"
