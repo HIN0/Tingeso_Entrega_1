@@ -19,22 +19,25 @@ services:
       timeout: 5s
       retries: 5
 
-  # 2. Keycloak (Servidor de Identidad) - ¡NUEVO!
+  # 2. Keycloak (Servidor de Identidad)
   keycloak:
-    image: quay.io/keycloak/keycloak:24.0.1
-    container_name: toolrent-keycloak
-    environment:
-      - KEYCLOAK_ADMIN=admin
-      - KEYCLOAK_ADMIN_PASSWORD=admin
-      # Usamos modo desarrollo para facilitar las cosas (http sin https)
-    command: start-dev
-    ports:
-      - "8090:8080" # Lo exponemos en el 8090 para no chocar con el Backend (8080)
-    networks:
-      - toolrent-net
-    depends_on:
-      db:
-        condition: service_healthy
+      image: quay.io/keycloak/keycloak:24.0.1
+      container_name: toolrent-keycloak
+      environment:
+        - KEYCLOAK_ADMIN=admin
+        - KEYCLOAK_ADMIN_PASSWORD=admin
+      # IMPORTANTE: Le decimos que importe el archivo al arrancar
+      command: start-dev --import-realm
+      ports:
+        - "8090:8080"
+      networks:
+        - toolrent-net
+      # IMPORTANTE: Conectamos tu archivo JSON al contenedor
+      volumes:
+        - ./keycloak-data/realm-export.json:/opt/keycloak/data/import/realm.json
+      depends_on:
+        db:
+          condition: service_healthy
 
   # 3. Backend (Spring Boot)
   backend:
