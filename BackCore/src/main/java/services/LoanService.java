@@ -103,13 +103,11 @@ public class LoanService {
             throw new InvalidOperationException("Client has reached the maximum number of active/late loans (5).");
         }
 
-        // 7. Not the same tool twice at the same time
-        boolean hasSameToolActiveOrLate = loanRepository.findByClientAndStatus(client, LoanStatus.ACTIVE).stream()
-                .anyMatch(l -> l.getTool() != null && l.getTool().getId().equals(toolId))
-                ||
-                loanRepository.findByClientAndStatus(client, LoanStatus.LATE).stream() // also LATE loans
+        // 7. Not the same tool twice at the same time.
+        // Only ACTIVE loans need checking: rule 2 already rejected clients with any LATE loan.
+        boolean hasSameToolOnLoan = activeLoans.stream()
                 .anyMatch(l -> l.getTool() != null && l.getTool().getId().equals(toolId));
-        if (hasSameToolActiveOrLate) {
+        if (hasSameToolOnLoan) {
             throw new InvalidOperationException("Client already has an active or late loan for this tool.");
         }
 

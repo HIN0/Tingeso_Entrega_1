@@ -276,10 +276,10 @@ public class LoanServiceTest {
         // the expected queries were used (not findAll)
         verify(loanRepository, times(1)).countByClientAndStatus(clientActive, LoanStatus.LATE);
         verify(loanRepository, times(1)).findByClientAndStatusAndTotalPenaltyGreaterThan(clientActive, LoanStatus.RECEIVED, 0.0);
-        // findByClientAndStatus(ACTIVE) is used by both the limit and the duplicate check
-        verify(loanRepository, times(2)).findByClientAndStatus(clientActive, LoanStatus.ACTIVE); 
-        
-        // findByClientAndStatus(LATE) is NOT streamed because the OR short-circuits
+        // the ACTIVE loans are queried ONCE and reused by the overdue, limit and duplicate checks
+        verify(loanRepository, times(1)).findByClientAndStatus(clientActive, LoanStatus.ACTIVE);
+
+        // LATE loans are never listed: rule 2 already rejects clients with LATE loans
         verify(loanRepository, never()).findByClientAndStatus(clientActive, LoanStatus.LATE);
         
         verify(loanRepository, never()).save(any()); // must not save
