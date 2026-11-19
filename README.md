@@ -126,16 +126,20 @@ authenticated user.
 ```bash
 git clone https://github.com/HIN0/Tingeso_Entrega_1.git
 cd Tingeso_Entrega_1
+cp .env.example .env        # Windows PowerShell: Copy-Item .env.example .env
 docker compose pull
 docker compose up -d
 ```
+
+Database and Keycloak admin credentials are read from `.env`, which is ignored by Git; [`.env.example`](.env.example)
+is the template with local demo values. Compose refuses to start if a variable is missing.
 
 The first start takes about a minute (Keycloak and the backend replicas start in order). Then open:
 
 | URL | Service |
 |---|---|
 | http://localhost | ToolRent |
-| http://localhost:8090 | Keycloak admin console (`admin` / `admin`) |
+| http://localhost:8090 | Keycloak admin console (user and password from `.env`) |
 
 **Demo users** (defined in [`keycloak-data/realm-export.json`](keycloak-data/realm-export.json)):
 
@@ -144,8 +148,8 @@ The first start takes about a minute (Keycloak and the backend replicas start in
 | `diego` | `diego123` | Administrator |
 | `juan` | `juan123` | Employee |
 
-> These credentials exist only for local demos. Change them, and the database and Keycloak admin passwords in
-> `compose.yml`, before exposing the application anywhere.
+> These users exist only for local demos. Remove them from the realm, and set strong passwords in `.env`, before
+> exposing the application anywhere.
 
 The database is seeded with 20 clients, 30 tools and sample loans (active, late, and returned with pending payment). To start again from a clean
 database: `docker compose down -v && docker compose up -d`.
@@ -259,6 +263,8 @@ Backend environment variables (defaults target a local run against the compose i
 | `KEYCLOAK_ISSUER_URI` | `http://localhost:8090/realms/toolrent-realm` | Expected `iss` claim (URL used by the browser) |
 | `KEYCLOAK_JWK_SET_URI` | `http://localhost:8090/realms/toolrent-realm/protocol/openid-connect/certs` | Signing keys (URL reachable by the backend) |
 
+In Docker Compose, `DB_USERNAME`, `DB_PASSWORD`, `KEYCLOAK_ADMIN` and `KEYCLOAK_ADMIN_PASSWORD` come from `.env`.
+
 Frontend build-time variables are documented in [`CoreBack-frontend/README.md`](CoreBack-frontend/README.md).
 
 ---
@@ -287,7 +293,7 @@ Frontend build-time variables are documented in [`CoreBack-frontend/README.md`](
 
 ## Known limitations
 
-- **Local deployment only:** HTTP without TLS, demo credentials in the repository, Keycloak in development mode
+- **Local deployment only:** HTTP without TLS, demo users in the Keycloak realm file, Keycloak in development mode
   (`start-dev`) and Jenkins running as root to use the Docker socket.
 - **Keycloak 24** is behind the current release and should be upgraded together with a production setup
   (`start` mode, its own database, HTTPS).
@@ -433,16 +439,20 @@ usuario autenticado.
 ```bash
 git clone https://github.com/HIN0/Tingeso_Entrega_1.git
 cd Tingeso_Entrega_1
+cp .env.example .env        # Windows PowerShell: Copy-Item .env.example .env
 docker compose pull
 docker compose up -d
 ```
+
+Las credenciales de la base de datos y del administrador de Keycloak se leen desde `.env`, que Git ignora;
+[`.env.example`](.env.example) es la plantilla con valores de demostración local. Compose no arranca si falta alguna variable.
 
 El primer inicio tarda alrededor de un minuto (Keycloak y las réplicas del backend arrancan en orden). Luego abre:
 
 | URL | Servicio |
 |---|---|
 | http://localhost | ToolRent |
-| http://localhost:8090 | Consola de administración de Keycloak (`admin` / `admin`) |
+| http://localhost:8090 | Consola de administración de Keycloak (usuario y contraseña de `.env`) |
 
 **Usuarios de demostración** (definidos en [`keycloak-data/realm-export.json`](keycloak-data/realm-export.json)):
 
@@ -451,8 +461,8 @@ El primer inicio tarda alrededor de un minuto (Keycloak y las réplicas del back
 | `diego` | `diego123` | Administrador |
 | `juan` | `juan123` | Empleado |
 
-> Estas credenciales existen solo para demostraciones locales. Cámbialas, junto con las contraseñas de la base de
-> datos y del administrador de Keycloak en `compose.yml`, antes de exponer la aplicación.
+> Estos usuarios existen solo para demostraciones locales. Elimínalos del realm y define contraseñas seguras en
+> `.env` antes de exponer la aplicación.
 
 La base de datos se carga con 20 clientes, 30 herramientas y préstamos de ejemplo (activos, atrasados y devueltos
 con pago pendiente). Para empezar de nuevo con una base limpia: `docker compose down -v && docker compose up -d`.
@@ -566,6 +576,8 @@ Variables de entorno del backend (los valores por defecto apuntan a una ejecuci�
 | `KEYCLOAK_ISSUER_URI` | `http://localhost:8090/realms/toolrent-realm` | Claim `iss` esperado (URL que usa el navegador) |
 | `KEYCLOAK_JWK_SET_URI` | `http://localhost:8090/realms/toolrent-realm/protocol/openid-connect/certs` | Claves de firma (URL accesible desde el backend) |
 
+En Docker Compose, `DB_USERNAME`, `DB_PASSWORD`, `KEYCLOAK_ADMIN` y `KEYCLOAK_ADMIN_PASSWORD` se toman de `.env`.
+
 Las variables del frontend, que se fijan al compilar, están documentadas en [`CoreBack-frontend/README.md`](CoreBack-frontend/README.md).
 
 ---
@@ -594,7 +606,7 @@ Las variables del frontend, que se fijan al compilar, están documentadas en [`C
 
 ## Limitaciones conocidas
 
-- **Solo despliegue local:** HTTP sin TLS, credenciales de demostración en el repositorio, Keycloak en modo
+- **Solo despliegue local:** HTTP sin TLS, usuarios de demostración en el archivo del realm, Keycloak en modo
   desarrollo (`start-dev`) y Jenkins ejecutándose como root para usar el socket de Docker.
 - **Keycloak 24** está atrasado respecto a la versión actual y debería actualizarse junto con una configuración
   de producción (modo `start`, base de datos propia, HTTPS).

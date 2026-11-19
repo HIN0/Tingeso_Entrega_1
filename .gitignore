@@ -1,0 +1,22 @@
+# Secrets and local configuration (use .env.example as the template)
+.env
+.env.*
+!.env.example
+
+# IDE and editor settings (each developer keeps their own)
+.idea/
+.vscode/
+*.iml
+
+# Local tooling
+.github/modernize/
+
+# Build output and dependencies (also covered by the module .gitignore files)
+target/
+node_modules/
+dist/
+
+# Logs and OS files
+*.log
+.DS_Store
+Thumbs.db
