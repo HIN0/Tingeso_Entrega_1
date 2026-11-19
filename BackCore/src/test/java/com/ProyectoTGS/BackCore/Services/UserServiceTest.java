@@ -26,7 +26,7 @@ public class UserServiceTest {
     private UserService userService;
 
     // =======================================================================
-    // MÉTODO: createUser
+    // METHOD: createUser
     // =======================================================================
 
     @Test
@@ -39,13 +39,13 @@ public class UserServiceTest {
                 .build();
         
         UserEntity savedUser = UserEntity.builder()
-                .id(1L) // Simular que la BD asigna un ID
+                .id(1L) // the database assigns an ID
                 .username("testuser")
                 .password("pass123")
                 .role(UserRole.EMPLOYEE)
                 .build();
 
-        // Mockeo: Cuando se guarde el usuario, devolver el usuario con ID
+        // Mock: saving the user returns it with an ID
         when(userRepository.save(any(UserEntity.class))).thenReturn(savedUser);
 
         // ACT
@@ -56,12 +56,12 @@ public class UserServiceTest {
         assertEquals(1L, result.getId());
         assertEquals("testuser", result.getUsername());
         
-        // Verificar que save fue llamado una vez con el objeto correcto
+        // save was called once with the given user
         verify(userRepository, times(1)).save(userToCreate);
     }
 
     // =======================================================================
-    // MÉTODO: findByUsername
+    // METHOD: findByUsername
     // =======================================================================
 
     @Test
@@ -74,17 +74,17 @@ public class UserServiceTest {
                 .role(UserRole.ADMIN)
                 .build();
         
-        // Mockeo: El repositorio encuentra al usuario
+        // Mock: the repository finds the user
         when(userRepository.findByUsername(username)).thenReturn(Optional.of(existingUser));
 
         // ACT
         Optional<UserEntity> resultOptional = userService.findByUsername(username);
 
         // ASSERT
-        assertTrue(resultOptional.isPresent()); // Verificar que el Optional contiene algo
-        assertEquals(existingUser, resultOptional.get()); // Verificar que es el usuario correcto
+        assertTrue(resultOptional.isPresent()); // the Optional has a value
+        assertEquals(existingUser, resultOptional.get()); // it is the expected user
         
-        // Verificar que el repositorio fue llamado
+        // the repository was queried
         verify(userRepository, times(1)).findByUsername(username);
     }
 
@@ -93,21 +93,21 @@ public class UserServiceTest {
         // ARRANGE
         String username = "usuario_inexistente";
         
-        // Mockeo: El repositorio NO encuentra al usuario
+        // Mock: the repository does NOT find the user
         when(userRepository.findByUsername(username)).thenReturn(Optional.empty());
 
         // ACT
         Optional<UserEntity> resultOptional = userService.findByUsername(username);
 
         // ASSERT
-        assertTrue(resultOptional.isEmpty()); // Verificar que el Optional está vacío
+        assertTrue(resultOptional.isEmpty()); // the Optional is empty
         
-        // Verificar que el repositorio fue llamado
+        // the repository was queried
         verify(userRepository, times(1)).findByUsername(username);
     }
 
     // =======================================================================
-    // MÉTODO: findOrCreate (user provisioning from the Keycloak JWT)
+    // METHOD: findOrCreate (user provisioning from the Keycloak JWT)
     // =======================================================================
 
     @Test

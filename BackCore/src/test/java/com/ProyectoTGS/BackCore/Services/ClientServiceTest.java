@@ -42,16 +42,16 @@ public class ClientServiceTest {
 
     @BeforeEach
     void setUp() {
-        // Cliente nuevo con todos los campos requeridos
+        // New client with every required field
         newClient = ClientEntity.builder()
                 .name("Juan Perez")
                 .rut("11.111.111-1")
                 .phone("912345678")
                 .email("juan@example.com")
-                .status(null) // Para probar asignación de estado por defecto
+                .status(null) // to test the default status
                 .build();
 
-        // Cliente existente
+        // Existing client
         existingClient = ClientEntity.builder()
                 .id(1L)
                 .name("Maria Lopez")
@@ -63,19 +63,19 @@ public class ClientServiceTest {
     }
 
     // =======================================================================
-    // MÉTODO: createClient
+    // METHOD: createClient
     // =======================================================================
 
     @Test
     void createClient_Success() {
-        // ARRANGE: Simular que el RUT no existe y que la persistencia devuelve el objeto guardado
+        // ARRANGE: the RUT does not exist and save returns the saved object
         when(clientRepository.existsByRut(newClient.getRut())).thenReturn(false);
-        // Capturar el argumento pasado a save para verificar el estado
+        // Capture the argument passed to save
         when(clientRepository.save(any(ClientEntity.class))).thenAnswer(invocation -> {
             ClientEntity clientToSave = invocation.getArgument(0);
-            // Simular asignación de ID por la BD
+            // the database assigns an ID
             if (clientToSave.getId() == null) clientToSave.setId(99L);
-             // Asegurar estado ACTIVE si era null
+             // ACTIVE if it was null
             if (clientToSave.getStatus() == null) clientToSave.setStatus(ClientStatus.ACTIVE);
             return clientToSave;
         });
@@ -83,7 +83,7 @@ public class ClientServiceTest {
         // ACT
         ClientEntity created = clientService.createClient(newClient);
 
-        // ASSERT: Verifica que se guarde como ACTIVE (estado por defecto)
+        // ASSERT: saved as ACTIVE (default status)
         assertNotNull(created);
         assertEquals(ClientStatus.ACTIVE, created.getStatus());
         verify(clientRepository, times(1)).save(newClient);
@@ -91,49 +91,49 @@ public class ClientServiceTest {
 
     @Test
     void createClient_FailsIfRutAlreadyExists() {
-        // ARRANGE: Simular que el RUT ya está en la base de datos
+        // ARRANGE: the RUT is already registered
         when(clientRepository.existsByRut(newClient.getRut())).thenReturn(true);
 
         // ACT & ASSERT
         assertThrows(IllegalArgumentException.class, () -> {
             clientService.createClient(newClient);
-        }, "Debe fallar si el RUT ya existe.");
+        }, "Must fail when the RUT already exists.");
         verify(clientRepository, never()).save(any());
     }
 
     @Test
     void createClient_FailsIfRequiredFieldIsNull_Name() {
-        // ARRANGE: Probar nombre nulo
+        // ARRANGE: null name
         newClient.setName(null);
 
         // ACT & ASSERT
         assertThrows(IllegalArgumentException.class, () -> {
             clientService.createClient(newClient);
-        }, "Debe fallar si falta el nombre.");
+        }, "Must fail when the name is missing.");
         verify(clientRepository, never()).save(any());
     }
 
     @Test
     void createClient_FailsIfRequiredFieldIsNull_Rut() {
-        // ARRANGE: Probar RUT nulo
+        // ARRANGE: null RUT
         newClient.setRut(null);
 
         // ACT & ASSERT
         assertThrows(IllegalArgumentException.class, () -> {
             clientService.createClient(newClient);
-        }, "Debe fallar si falta el RUT.");
+        }, "Must fail when the RUT is missing.");
         verify(clientRepository, never()).save(any());
     }
 
     @Test
     void createClient_FailsIfRequiredFieldIsNull_Phone() {
-        // ARRANGE: Probar teléfono nulo
+        // ARRANGE: null phone
         newClient.setPhone(null);
 
         // ACT & ASSERT
         assertThrows(IllegalArgumentException.class, () -> {
             clientService.createClient(newClient);
-        }, "Debe fallar si falta el teléfono.");
+        }, "Must fail when the phone is missing.");
         verify(clientRepository, never()).save(any());
     }
 
@@ -170,27 +170,27 @@ public class ClientServiceTest {
 
      @Test
     void createClient_FailsIfRequiredFieldIsNull_Email() {
-        // ARRANGE: Probar email nulo
+        // ARRANGE: null email
         newClient.setEmail(null);
 
         // ACT & ASSERT
         assertThrows(IllegalArgumentException.class, () -> {
             clientService.createClient(newClient);
-        }, "Debe fallar si falta el email.");
+        }, "Must fail when the email is missing.");
         verify(clientRepository, never()).save(any());
     }
 
     // =======================================================================
-    // MÉTODO: updateStatus
+    // METHOD: updateStatus
     // =======================================================================
 
     @Test
     void updateStatus_ToRestricted_Success() {
-        // ARRANGE: Simular que el cliente existe y está activo
+        // ARRANGE: the client exists and is active
         when(clientRepository.findById(1L)).thenReturn(Optional.of(existingClient));
         when(clientRepository.save(any(ClientEntity.class))).thenReturn(existingClient);
 
-        // ACT: Cambiar estado a RESTRICTED
+        // ACT: change status to RESTRICTED
         ClientEntity updated = clientService.updateStatus(1L, ClientStatus.RESTRICTED);
 
         // ASSERT
@@ -200,12 +200,12 @@ public class ClientServiceTest {
 
     @Test
     void updateStatus_ToActive_Success() {
-        // ARRANGE: Simular que el cliente existe y cambiar estado a ACTIVE
+        // ARRANGE: the client exists; change status to ACTIVE
         existingClient.setStatus(ClientStatus.RESTRICTED);
         when(clientRepository.findById(1L)).thenReturn(Optional.of(existingClient));
         when(clientRepository.save(any(ClientEntity.class))).thenReturn(existingClient);
 
-        // ACT: Cambiar estado a ACTIVE
+        // ACT: change status to ACTIVE
         ClientEntity updated = clientService.updateStatus(1L, ClientStatus.ACTIVE);
 
         // ASSERT
@@ -215,30 +215,30 @@ public class ClientServiceTest {
 
     @Test
     void updateStatus_FailsIfClientNotFound() {
-        // ARRANGE: Simular que el cliente NO existe
+        // ARRANGE: the client does NOT exist
         when(clientRepository.findById(99L)).thenReturn(Optional.empty());
 
-        // ACT & ASSERT: Espera ResourceNotFoundException
+        // ACT & ASSERT: ResourceNotFoundException expected
         assertThrows(ResourceNotFoundException.class, () -> {
             clientService.updateStatus(99L, ClientStatus.RESTRICTED);
-        }, "Debe fallar si el cliente no es encontrado.");
+        }, "Must fail when the client is not found.");
         verify(clientRepository, never()).save(any());
     }
 
     // =======================================================================
-    // MÉTODO: updateClientDetails
+    // METHOD: updateClientDetails
     // =======================================================================
     @Test
     void updateClientDetails_Success() {
-        // ARRANGE: Datos para actualizar y mockeo del repositorio
+        // ARRANGE: update data and repository mock
         Long clientId = 1L;
         UpdateClientRequest updateRequest = new UpdateClientRequest(
-                "Maria Lopez Actualizada", // Nuevo nombre
-                "987654321",                // Nuevo teléfono
-                "maria.actualizada@example.com" // Nuevo email
+                "Maria Lopez Actualizada", // new name
+                "987654321", // new phone
+                "maria.actualizada@example.com" // new email
         );
 
-        // Cliente existente ANTES de la actualización (con RUT y Status originales)
+        // Existing client BEFORE the update (original RUT and status)
         ClientEntity clientBeforeUpdate = ClientEntity.builder()
                 .id(clientId)
                 .name("Maria Lopez")
@@ -249,36 +249,36 @@ public class ClientServiceTest {
                 .build();
 
         when(clientRepository.findById(clientId)).thenReturn(Optional.of(clientBeforeUpdate));
-        // Simular que save devuelve la entidad que se le pasa para verificarla
+        // save returns the entity it receives
         when(clientRepository.save(any(ClientEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        // ACT: Llamar al método del servicio
+        // ACT
         ClientEntity updatedClient = clientService.updateClientDetails(clientId, updateRequest);
 
-        // ASSERT: Verificar los campos actualizados y los que NO deben cambiar
+        // ASSERT: updated fields and the ones that must NOT change
         assertNotNull(updatedClient);
-        assertEquals(clientId, updatedClient.getId()); // ID no cambia
-        assertEquals("Maria Lopez Actualizada", updatedClient.getName()); // Nombre actualizado
-        assertEquals("987654321", updatedClient.getPhone());               // Teléfono actualizado
-        assertEquals("maria.actualizada@example.com", updatedClient.getEmail()); // Email actualizado
-        assertEquals("22.222.222-2", updatedClient.getRut());             // RUT NO debe cambiar
-        assertEquals(ClientStatus.ACTIVE, updatedClient.getStatus());      // Status NO debe cambiar
+        assertEquals(clientId, updatedClient.getId()); // ID unchanged
+        assertEquals("Maria Lopez Actualizada", updatedClient.getName()); // name updated
+        assertEquals("987654321", updatedClient.getPhone()); // phone updated
+        assertEquals("maria.actualizada@example.com", updatedClient.getEmail()); // email updated
+        assertEquals("22.222.222-2", updatedClient.getRut()); // RUT must NOT change
+        assertEquals(ClientStatus.ACTIVE, updatedClient.getStatus()); // status must NOT change
 
-        // Verificar que se llamó a save una vez con la entidad correcta
+        // save was called once with the expected entity
         verify(clientRepository, times(1)).findById(clientId);
         verify(clientRepository, times(1)).save(argThat(client ->
                 client.getId().equals(clientId) &&
                 client.getName().equals("Maria Lopez Actualizada") &&
                 client.getPhone().equals("987654321") &&
                 client.getEmail().equals("maria.actualizada@example.com") &&
-                client.getRut().equals("22.222.222-2") && // Asegurarse que los campos no editables siguen igual
+                client.getRut().equals("22.222.222-2") && // non-editable fields unchanged
                 client.getStatus().equals(ClientStatus.ACTIVE)
         ));
     }
 
     @Test
     void updateClientDetails_FailsWhenClientNotFound() {
-        // ARRANGE: Un ID de cliente que no existe y datos de actualización
+        // ARRANGE: unknown client ID and update data
         Long nonExistentClientId = 99L;
         UpdateClientRequest updateRequest = new UpdateClientRequest(
                 "Nombre No Importa",
@@ -286,30 +286,30 @@ public class ClientServiceTest {
                 "noexiste@example.com"
         );
 
-        // Mockeo: findById devuelve Optional vacío para simular que no se encuentra
+        // Mock: findById returns an empty Optional
         when(clientRepository.findById(nonExistentClientId)).thenReturn(Optional.empty());
 
-        // ACT & ASSERT: Esperamos que se lance ResourceNotFoundException
+        // ACT & ASSERT: ResourceNotFoundException expected
         assertThrows(ResourceNotFoundException.class, () -> {
             clientService.updateClientDetails(nonExistentClientId, updateRequest);
-        }, "Debe lanzar ResourceNotFoundException si el cliente no se encuentra.");
+        }, "Must throw ResourceNotFoundException when the client is not found.");
 
-        // Verificar que findById fue llamado
+        // findById was called
         verify(clientRepository, times(1)).findById(nonExistentClientId);
-        // VERIFICACIÓN CRÍTICA: Asegurarse de que NUNCA se intentó guardar nada
+        // CRITICAL: nothing must be saved
         verify(clientRepository, never()).save(any(ClientEntity.class));
     }
 
 // =======================================================================
-    // MÉTODO: attemptClientReactivation
+    // METHOD: attemptClientReactivation
     // =======================================================================
 
-    @Mock // Necesitamos mockear LoanRepository también
+    @Mock // LoanRepository is also needed
     private LoanRepository loanRepository;
 
     @Test
     void attemptClientReactivation_Success_WhenNoDebtsOrLateLoans() {
-        // ARRANGE: Cliente restringido pero sin deudas ni atrasos
+        // ARRANGE: restricted client without debts or late loans
         Long clientId = 3L;
         ClientEntity restrictedClient = ClientEntity.builder()
                 .id(clientId)
@@ -317,35 +317,35 @@ public class ClientServiceTest {
                 .status(ClientStatus.RESTRICTED)
                 .build();
 
-        // Mockeo:
-        // 1. Encontrar al cliente
+        // Mocks:
+        // 1. Find the client
         when(clientRepository.findById(clientId)).thenReturn(Optional.of(restrictedClient));
-        // 2. Verificar que no hay préstamos LATE
-        when(loanRepository.countByClientAndStatus(restrictedClient, LoanStatus.LATE)).thenReturn(0L); // 0 préstamos LATE
-        // 3. Verificar que no hay préstamos RECEIVED con deuda
+        // 2. No LATE loans
+        when(loanRepository.countByClientAndStatus(restrictedClient, LoanStatus.LATE)).thenReturn(0L); // 0 LATE loans
+        // 3. No RECEIVED loans with debt
         when(loanRepository.findByClientAndStatusAndTotalPenaltyGreaterThan(restrictedClient, LoanStatus.RECEIVED, 0.0))
-                .thenReturn(Collections.emptyList()); // Lista vacía = sin deudas
-        // 4. Simular el guardado (cuando se llama a updateStatus internamente)
-        //    Devuelve el cliente con el estado ya cambiado a ACTIVE
+                .thenReturn(Collections.emptyList()); // empty list = no debts
+        // 4. Saving (updateStatus is called internally)
+        // returns the client already ACTIVE
         when(clientRepository.save(any(ClientEntity.class))).thenAnswer(invocation -> {
             ClientEntity clientToSave = invocation.getArgument(0);
-            clientToSave.setStatus(ClientStatus.ACTIVE); // Simulamos el cambio de estado
+            clientToSave.setStatus(ClientStatus.ACTIVE); // simulated status change
             return clientToSave;
         });
 
 
-        // ACT: Intentar reactivar al cliente
+        // ACT: try to reactivate the client
         ClientEntity reactivatedClient = clientService.attemptClientReactivation(clientId);
 
-        // ASSERT: Verificar que el estado cambió a ACTIVE
+        // ASSERT: status changed to ACTIVE
         assertNotNull(reactivatedClient);
         assertEquals(ClientStatus.ACTIVE, reactivatedClient.getStatus());
 
-        // Verificar que se realizaron las comprobaciones necesarias
+        // the required checks were made
         verify(clientRepository, times(2)).findById(clientId);
         verify(loanRepository, times(1)).countByClientAndStatus(restrictedClient, LoanStatus.LATE);
         verify(loanRepository, times(1)).findByClientAndStatusAndTotalPenaltyGreaterThan(restrictedClient, LoanStatus.RECEIVED, 0.0);
-        // Verificar que se guardó el cambio de estado
+        // the status change was saved
         verify(clientRepository, times(1)).save(argThat(client ->
                 client.getId().equals(clientId) && client.getStatus().equals(ClientStatus.ACTIVE)
         ));
@@ -353,37 +353,37 @@ public class ClientServiceTest {
 
     @Test
     void attemptClientReactivation_DoesNothing_WhenClientAlreadyActive() {
-        // ARRANGE: Cliente que ya está ACTIVO
+        // ARRANGE: client already ACTIVE
         Long clientId = 4L;
         ClientEntity activeClient = ClientEntity.builder()
                 .id(clientId)
                 .name("Ana Activa")
-                .status(ClientStatus.ACTIVE) // Estado inicial es ACTIVE
+                .status(ClientStatus.ACTIVE) // initial status is ACTIVE
                 .build();
 
-        // Mockeo: Encontrar al cliente activo
+        // Mock: find the active client
         when(clientRepository.findById(clientId)).thenReturn(Optional.of(activeClient));
 
-        // ACT: Intentar reactivar al cliente ya activo
+        // ACT: try to reactivate an active client
         ClientEntity resultClient = clientService.attemptClientReactivation(clientId);
 
-        // ASSERT: Verificar que el cliente devuelto sigue siendo el mismo y está ACTIVO
+        // ASSERT: the same client is returned, still ACTIVE
         assertNotNull(resultClient);
         assertEquals(clientId, resultClient.getId());
         assertEquals(ClientStatus.ACTIVE, resultClient.getStatus());
 
-        // Verificar que solo se llamó a findById una vez
+        // findById was called only once
         verify(clientRepository, times(1)).findById(clientId);
-        // VERIFICACIÓN CRÍTICA: Asegurarse de que NO se hicieron chequeos de préstamos
+        // CRITICAL: no loan checks were made
         verify(loanRepository, never()).countByClientAndStatus(any(ClientEntity.class), any(LoanStatus.class));
         verify(loanRepository, never()).findByClientAndStatusAndTotalPenaltyGreaterThan(any(ClientEntity.class), any(LoanStatus.class), anyDouble());
-        // VERIFICACIÓN CRÍTICA: Asegurarse de que NO se intentó guardar nada
+        // CRITICAL: nothing must be saved
         verify(clientRepository, never()).save(any(ClientEntity.class));
     }
 
     @Test
     void attemptClientReactivation_Fails_WhenClientHasLateLoans() {
-        // ARRANGE: Cliente restringido con préstamos atrasados
+        // ARRANGE: restricted client with late loans
         Long clientId = 5L;
         ClientEntity restrictedClientWithLateLoan = ClientEntity.builder()
                 .id(clientId)
@@ -391,29 +391,29 @@ public class ClientServiceTest {
                 .status(ClientStatus.RESTRICTED)
                 .build();
 
-        // Mockeo:
-        // 1. Encontrar al cliente
+        // Mocks:
+        // 1. Find the client
         when(clientRepository.findById(clientId)).thenReturn(Optional.of(restrictedClientWithLateLoan));
-        // 2. SIMULAR QUE TIENE PRÉSTAMOS LATE (devolver > 0)
-        when(loanRepository.countByClientAndStatus(restrictedClientWithLateLoan, LoanStatus.LATE)).thenReturn(1L); // Tiene 1 préstamo LATE
+        // 2. The client HAS LATE loans (> 0)
+        when(loanRepository.countByClientAndStatus(restrictedClientWithLateLoan, LoanStatus.LATE)).thenReturn(1L); // 1 LATE loan
 
-        // ACT & ASSERT: Esperamos que lance InvalidOperationException
+        // ACT & ASSERT: InvalidOperationException expected
         assertThrows(InvalidOperationException.class, () -> {
             clientService.attemptClientReactivation(clientId);
-        }, "Debe lanzar InvalidOperationException porque el cliente tiene préstamos LATE.");
+        }, "Must throw InvalidOperationException because the client has LATE loans.");
 
-        // Verificar que se hicieron las comprobaciones hasta el punto de fallo
+        // checks were made up to the failure point
         verify(clientRepository, times(1)).findById(clientId);
         verify(loanRepository, times(1)).countByClientAndStatus(restrictedClientWithLateLoan, LoanStatus.LATE);
-        // VERIFICACIÓN CRÍTICA: Asegurarse de que NO continuó verificando deudas RECEIVED
+        // CRITICAL: RECEIVED debts were NOT checked afterwards
         verify(loanRepository, never()).findByClientAndStatusAndTotalPenaltyGreaterThan(any(ClientEntity.class), any(LoanStatus.class), anyDouble());
-        // VERIFICACIÓN CRÍTICA: Asegurarse de que NO se intentó guardar (cambiar estado)
+        // CRITICAL: nothing must be saved (no status change)
         verify(clientRepository, never()).save(any(ClientEntity.class));
     }
 
     @Test
     void attemptClientReactivation_Fails_WhenClientHasUnpaidReceivedLoans() {
-        // ARRANGE: Cliente restringido sin atrasos LATE, pero con deudas RECEIVED
+        // ARRANGE: restricted client without LATE loans but with RECEIVED debts
         Long clientId = 6L;
         ClientEntity restrictedClientWithDebt = ClientEntity.builder()
                 .id(clientId)
@@ -421,108 +421,108 @@ public class ClientServiceTest {
                 .status(ClientStatus.RESTRICTED)
                 .build();
 
-        // Simular un préstamo RECEIVED con penalidad pendiente
+        // A RECEIVED loan with a pending penalty
         LoanEntity unpaidLoan = LoanEntity.builder()
                 .id(101L)
                 .client(restrictedClientWithDebt)
                 .status(LoanStatus.RECEIVED)
-                .totalPenalty(5000.0) // Tiene deuda pendiente
+                .totalPenalty(5000.0) // pending debt
                 .build();
 
-        // Mockeo:
-        // 1. Encontrar al cliente
+        // Mocks:
+        // 1. Find the client
         when(clientRepository.findById(clientId)).thenReturn(Optional.of(restrictedClientWithDebt));
-        // 2. No tiene préstamos LATE
+        // 2. No LATE loans
         when(loanRepository.countByClientAndStatus(restrictedClientWithDebt, LoanStatus.LATE)).thenReturn(0L);
-        // 3. SIMULAR QUE TIENE DEUDAS PENDIENTES (lista NO vacía)
+        // 3. The client HAS pending debts (non-empty list)
         when(loanRepository.findByClientAndStatusAndTotalPenaltyGreaterThan(restrictedClientWithDebt, LoanStatus.RECEIVED, 0.0))
-                .thenReturn(List.of(unpaidLoan)); // Devuelve una lista con el préstamo pendiente
+                .thenReturn(List.of(unpaidLoan)); // list with the unpaid loan
 
-        // ACT & ASSERT: Esperamos que lance InvalidOperationException
+        // ACT & ASSERT: InvalidOperationException expected
         assertThrows(InvalidOperationException.class, () -> {
             clientService.attemptClientReactivation(clientId);
-        }, "Debe lanzar InvalidOperationException porque el cliente tiene deudas pendientes.");
+        }, "Must throw InvalidOperationException because the client has pending debts.");
 
-        // Verificar que se hicieron las comprobaciones hasta el punto de fallo
+        // checks were made up to the failure point
         verify(clientRepository, times(1)).findById(clientId);
         verify(loanRepository, times(1)).countByClientAndStatus(restrictedClientWithDebt, LoanStatus.LATE);
         verify(loanRepository, times(1)).findByClientAndStatusAndTotalPenaltyGreaterThan(restrictedClientWithDebt, LoanStatus.RECEIVED, 0.0);
-        // VERIFICACIÓN CRÍTICA: Asegurarse de que NO se intentó guardar (cambiar estado)
+        // CRITICAL: nothing must be saved (no status change)
         verify(clientRepository, never()).save(any(ClientEntity.class));
     }
 
     @Test
     void attemptClientReactivation_Fails_WhenClientNotFound() {
-        // ARRANGE: Un ID de cliente que no existe
+        // ARRANGE: unknown client ID
         Long nonExistentClientId = 99L;
 
-        // Mockeo: findById devuelve Optional vacío para simular que no se encuentra
+        // Mock: findById returns an empty Optional
         when(clientRepository.findById(nonExistentClientId)).thenReturn(Optional.empty());
 
-        // ACT & ASSERT: Esperamos que se lance ResourceNotFoundException directamente desde getClientById
+        // ACT & ASSERT: ResourceNotFoundException thrown by getClientById
         assertThrows(ResourceNotFoundException.class, () -> {
             clientService.attemptClientReactivation(nonExistentClientId);
-        }, "Debe lanzar ResourceNotFoundException si el cliente no se encuentra.");
+        }, "Must throw ResourceNotFoundException when the client is not found.");
 
-        // Verificar que solo se intentó buscar al cliente una vez
+        // the client was looked up only once
         verify(clientRepository, times(1)).findById(nonExistentClientId);
-        // VERIFICACIÓN CRÍTICA: Asegurarse de que NO se hicieron chequeos de préstamos
+        // CRITICAL: no loan checks were made
         verify(loanRepository, never()).countByClientAndStatus(any(ClientEntity.class), any(LoanStatus.class));
         verify(loanRepository, never()).findByClientAndStatusAndTotalPenaltyGreaterThan(any(ClientEntity.class), any(LoanStatus.class), anyDouble());
-        // VERIFICACIÓN CRÍTICA: Asegurarse de que NO se intentó guardar nada
+        // CRITICAL: nothing must be saved
         verify(clientRepository, never()).save(any(ClientEntity.class));
     }
 
     // =======================================================================
-    // MÉTODO: getAllClients
+    // METHOD: getAllClients
     // =======================================================================
 
     @Test
     void getAllClients_ReturnsListOfClients() {
-        // ARRANGE: Crear una lista de clientes simulada
+        // ARRANGE: list of clients
         ClientEntity client1 = ClientEntity.builder().id(1L).name("Cliente Uno").build();
         ClientEntity client2 = ClientEntity.builder().id(2L).name("Cliente Dos").build();
         List<ClientEntity> mockClientList = Arrays.asList(client1, client2);
 
-        // Mockeo: findAll() devuelve la lista simulada
+        // Mock: findAll() returns the list
         when(clientRepository.findAll()).thenReturn(mockClientList);
 
-        // ACT: Llamar al método del servicio
+        // ACT
         List<ClientEntity> resultList = clientService.getAllClients();
 
-        // ASSERT: Verificar que la lista devuelta no sea nula y contenga el número esperado de elementos
+        // ASSERT: the list is not null and has the expected size
         assertNotNull(resultList);
         assertEquals(2, resultList.size());
         assertEquals("Cliente Uno", resultList.get(0).getName());
         assertEquals("Cliente Dos", resultList.get(1).getName());
 
-        // Verificar que findAll() fue llamado exactamente una vez
+        // findAll() was called exactly once
         verify(clientRepository, times(1)).findAll();
     }
 
     @Test
     void getAllClients_ReturnsEmptyListWhenNoClients() {
-        // ARRANGE: Mockeo para devolver una lista vacía
+        // ARRANGE: findAll() returns an empty list
         when(clientRepository.findAll()).thenReturn(Collections.emptyList());
 
-        // ACT: Llamar al método del servicio
+        // ACT
         List<ClientEntity> resultList = clientService.getAllClients();
 
-        // ASSERT: Verificar que la lista devuelta no sea nula y esté vacía
+        // ASSERT: the list is not null and is empty
         assertNotNull(resultList);
         assertTrue(resultList.isEmpty());
 
-        // Verificar que findAll() fue llamado exactamente una vez
+        // findAll() was called exactly once
         verify(clientRepository, times(1)).findAll();
     }
 
     // =======================================================================
-    // MÉTODO: getClientById
+    // METHOD: getClientById
     // =======================================================================
 
     @Test
     void getClientById_Success_WhenClientExists() {
-        // ARRANGE: Un cliente existente
+        // ARRANGE: an existing client
         Long clientId = 1L;
         ClientEntity existingClient = ClientEntity.builder()
                 .id(clientId)
@@ -531,35 +531,35 @@ public class ClientServiceTest {
                 .status(ClientStatus.ACTIVE)
                 .build();
 
-        // Mockeo: findById devuelve el Optional con el cliente
+        // Mock: findById returns the client
         when(clientRepository.findById(clientId)).thenReturn(Optional.of(existingClient));
 
-        // ACT: Llamar al método del servicio
+        // ACT
         ClientEntity foundClient = clientService.getClientById(clientId);
 
-        // ASSERT: Verificar que el cliente devuelto es el esperado
+        // ASSERT: the expected client is returned
         assertNotNull(foundClient);
         assertEquals(clientId, foundClient.getId());
         assertEquals("Cliente Existente", foundClient.getName());
 
-        // Verificar que findById fue llamado una vez
+        // findById was called once
         verify(clientRepository, times(1)).findById(clientId);
     }
 
     @Test
     void getClientById_Fails_WhenClientNotFound() {
-        // ARRANGE: Un ID de cliente que no existe
+        // ARRANGE: unknown client ID
         Long nonExistentClientId = 99L;
 
-        // Mockeo: findById devuelve Optional vacío
+        // Mock: findById returns an empty Optional
         when(clientRepository.findById(nonExistentClientId)).thenReturn(Optional.empty());
 
-        // ACT & ASSERT: Esperamos que se lance ResourceNotFoundException
+        // ACT & ASSERT: ResourceNotFoundException expected
         assertThrows(ResourceNotFoundException.class, () -> {
             clientService.getClientById(nonExistentClientId);
-        }, "Debe lanzar ResourceNotFoundException si el cliente no se encuentra.");
+        }, "Must throw ResourceNotFoundException when the client is not found.");
 
-        // Verificar que findById fue llamado una vez
+        // findById was called once
         verify(clientRepository, times(1)).findById(nonExistentClientId);
     }
 }

@@ -42,7 +42,7 @@ public class LoanServiceTest {
     @InjectMocks
     private LoanService loanService;
 
-    // Entidades de prueba (SETUP)
+    // Test entities (SETUP)
     private ClientEntity clientActive;
     private ClientEntity clientRestricted;
     private ToolEntity toolAvailable;
@@ -50,20 +50,20 @@ public class LoanServiceTest {
 
     @BeforeEach
     void setUp() {
-        // Configuramos entidades base que se usan en la mayoría de los tests
+        // Base entities used by most tests
         clientActive = ClientEntity.builder().id(1L).status(ClientStatus.ACTIVE).build();
         clientRestricted = ClientEntity.builder().id(2L).status(ClientStatus.RESTRICTED).build();
         
-        // La herramienta debe tener stock > 0 para que la mayoría de los préstamos pasen
+        // The tool needs stock > 0 so that most loans succeed
         toolAvailable = ToolEntity.builder().id(10L).stock(1).status(ToolStatus.AVAILABLE).replacementValue(45000).build();
         testUser = UserEntity.builder().username("test_user").id(1L).build();
         
-        // Re-inicializamos el servicio para cada prueba
+        // Fresh service instance for every test
         loanService = new LoanService(loanRepository, clientRepository, toolRepository, toolService, tariffService, clientService);
     }
 
     // =========================================================================================================
-    // ÉPICA 2: TESTS PARA createLoan (Validaciones de Préstamo)
+    // EPIC 2: createLoan (loan validations)
     // =========================================================================================================
 
     @Test
@@ -73,7 +73,7 @@ public class LoanServiceTest {
         LocalDate dueDate = today.plusDays(7);
         LoanEntity newLoan = LoanEntity.builder().client(clientActive).tool(toolAvailable).startDate(today).dueDate(dueDate).status(LoanStatus.ACTIVE).totalPenalty(0.0).build();
 
-        // MOCKEO: Simular que el cliente, herramienta existen, no hay préstamos y la persistencia funciona
+        // MOCK: client and tool exist, no previous loans, persistence works
         when(clientRepository.findById(1L)).thenReturn(Optional.of(clientActive));
         when(toolRepository.findById(10L)).thenReturn(Optional.of(toolAvailable));
         when(loanRepository.save(any(LoanEntity.class))).thenReturn(newLoan);
@@ -82,7 +82,7 @@ public class LoanServiceTest {
         LoanEntity createdLoan = loanService.createLoan(1L, 10L, today, dueDate, testUser);
 
         // ASSERT
-        // Confirma el estado y la manipulación de inventario/Kardex (Épica 2, 5)
+        // Status and inventory/Kardex handling (Epics 2, 5)
         assertNotNull(createdLoan);
         assertEquals(LoanStatus.ACTIVE, createdLoan.getStatus());
         verify(toolService, times(1)).decrementStockForLoan(toolAvailable, testUser);
@@ -90,46 +90,46 @@ public class LoanServiceTest {
 
     @Test
     void createLoan_FailsWhenClientIsRestricted() {
-        // ÉPICA 2 / 3: RN - No prestar a clientes restringidos
-        // ARRANGE: Cliente 2 (clientRestricted) es RESTRICTED
+        // EPIC 2 / 3: rule - restricted clients cannot borrow
+        // ARRANGE: client 2 (clientRestricted) is RESTRICTED
         LocalDate today = LocalDate.now();
         LocalDate dueDate = today.plusDays(7);
         Long restrictedClientId = clientRestricted.getId(); // 2L
         Long toolId = toolAvailable.getId(); // 10L
 
-        // Mockeo:
+        // Mocks:
         when(clientRepository.findById(restrictedClientId)).thenReturn(Optional.of(clientRestricted));
         when(toolRepository.findById(toolId)).thenReturn(Optional.of(toolAvailable));
 
-        // ACT & ASSERT: Debe lanzar InvalidOperationException (basado en LoanService.java línea 66)
+        // ACT & ASSERT: InvalidOperationException expected
         assertThrows(InvalidOperationException.class, () -> { 
             loanService.createLoan(restrictedClientId, toolId, today, dueDate, testUser);
-        }, "Debe lanzar InvalidOperationException porque el cliente está restringido.");
+        }, "Must throw InvalidOperationException because the client is restricted.");
         
-        // VERIFY: Verificar que falló después de buscar cliente/herramienta, pero antes de guardar
+        // VERIFY: it failed after loading client/tool and before saving
         verify(clientRepository, times(1)).findById(restrictedClientId);
         verify(toolRepository, times(1)).findById(toolId);
 
-        // VERIFICACIÓN CRÍTICA: Asegurarse de que NO continuó con las siguientes validaciones
+        // CRITICAL: the next validations were NOT executed
         verify(loanRepository, never()).countByClientAndStatus(any(), any());
         verify(loanRepository, never()).findByClientAndStatusAndTotalPenaltyGreaterThan(any(), any(), anyDouble());
         verify(loanRepository, never()).findByClientAndStatus(any(), any());
         
-        // VERIFICACIÓN CRÍTICA: Asegurarse de que NO guardó
+        // CRITICAL: nothing was saved
         verify(loanRepository, never()).save(any());
         verify(toolService, never()).decrementStockForLoan(any(), any());
     }
     
     @Test
     void createLoan_FailsWhenDueDateIsBeforeStartDate() {
-        // ÉPICA 2: RN - Validación de fechas
+        // EPIC 2: rule - date validation
         // ARRANGE: dueDate es anterior a startDate
         LocalDate startDate = LocalDate.now();
         LocalDate dueDate = startDate.minusDays(1);
         when(clientRepository.findById(1L)).thenReturn(Optional.of(clientActive));
         when(toolRepository.findById(10L)).thenReturn(Optional.of(toolAvailable));
 
-        // ACT & ASSERT: Debe lanzar la excepción de argumento ilegal
+        // ACT & ASSERT: IllegalArgumentException expected
         assertThrows(IllegalArgumentException.class, () -> 
             loanService.createLoan(1L, 10L, startDate, dueDate, testUser));
         verify(loanRepository, never()).save(any());
@@ -137,236 +137,236 @@ public class LoanServiceTest {
 
     @Test
     void createLoan_FailsWhenLimitOfFiveActiveLoansIsReached() {
-        // ÉPICA 2: RN - Límite de 5 préstamos activos
-        // ARRANGE: Simular 5 préstamos activos para el cliente 1L
+        // EPIC 2: rule - limit of 5 active loans
+        // ARRANGE: client 1L already has 5 active loans
         LocalDate today = LocalDate.now();
         LocalDate dueDate = today.plusDays(7);
 
-        // Lista simulada de 5 préstamos ACTIVOS
+        // 5 ACTIVE loans
         List<LoanEntity> fiveActiveLoans = List.of(
-            LoanEntity.builder().build(), // El contenido no importa, solo el tamaño
+            LoanEntity.builder().build(), // content does not matter, only the size
             LoanEntity.builder().build(),
             LoanEntity.builder().build(),
             LoanEntity.builder().build(),
             LoanEntity.builder().build()
         );
 
-        // MOCKEO
+        // MOCK
         when(clientRepository.findById(1L)).thenReturn(Optional.of(clientActive));
         when(toolRepository.findById(10L)).thenReturn(Optional.of(toolAvailable));
         
-        // 1. Simular validaciones previas (LATE y RECEIVED)
-        when(loanRepository.countByClientAndStatus(clientActive, LoanStatus.LATE)).thenReturn(0L); // No tiene LATE
+        // 1. Previous validations pass (LATE and RECEIVED)
+        when(loanRepository.countByClientAndStatus(clientActive, LoanStatus.LATE)).thenReturn(0L); // no LATE loans
         when(loanRepository.findByClientAndStatusAndTotalPenaltyGreaterThan(clientActive, LoanStatus.RECEIVED, 0.0))
-                .thenReturn(Collections.emptyList()); // No tiene deudas RECEIVED
+                .thenReturn(Collections.emptyList()); // no RECEIVED debts
 
-        // 2. Simular la validación que debe fallar (Límite de 5)
-        // El servicio llama a findByClientAndStatus(client, ACTIVE) y .size()
-        when(loanRepository.findByClientAndStatus(clientActive, LoanStatus.ACTIVE)).thenReturn(fiveActiveLoans); // Devuelve 5 activos
+        // 2. The validation that must fail (limit of 5)
+        // The service calls findByClientAndStatus(client, ACTIVE).size()
+        when(loanRepository.findByClientAndStatus(clientActive, LoanStatus.ACTIVE)).thenReturn(fiveActiveLoans); // 5 active loans
 
-        // ACT & ASSERT: Intenta crear el sexto préstamo
+        // ACT & ASSERT: try to create the sixth loan
         assertThrows(InvalidOperationException.class, () -> {
             loanService.createLoan(1L, 10L, today, dueDate, testUser);
-        }, "Debe fallar al alcanzar el límite de 5 préstamos activos.");
+        }, "Must fail when the limit of 5 active loans is reached.");
 
-        // Verificar que se llamó a los métodos correctos (y no a findAll)
+        // the expected queries were used (not findAll)
         verify(loanRepository, times(1)).countByClientAndStatus(clientActive, LoanStatus.LATE);
         verify(loanRepository, times(1)).findByClientAndStatusAndTotalPenaltyGreaterThan(clientActive, LoanStatus.RECEIVED, 0.0);
         verify(loanRepository, times(1)).findByClientAndStatus(clientActive, LoanStatus.ACTIVE);
-        verify(loanRepository, never()).save(any()); // No debe guardar
+        verify(loanRepository, never()).save(any()); // must not save
         verify(loanRepository, never()).findAll();
     }
 
     @Test
     void createLoan_Fails_WhenToolStatusIsNotAvailable() {
-        // ARRANGE: Herramienta en estado LOANED
+        // ARRANGE: tool with status LOANED
         Long toolId = 20L;
         ToolEntity toolLoaned = ToolEntity.builder()
                 .id(toolId)
-                .stock(0) // Stock no importa si el estado es incorrecto
-                .status(ToolStatus.LOANED) // <-- Estado INVÁLIDO
+                .stock(0) // stock is irrelevant when the status is wrong
+                .status(ToolStatus.LOANED) // <-- INVALID status
                 .build();
 
-        // Mockeo:
-        // 1. Validaciones previas (Cliente y Deudas) pasan
+        // Mocks:
+        // 1. Client and debt validations pass
         when(clientRepository.findById(1L)).thenReturn(Optional.of(clientActive));
         when(loanRepository.countByClientAndStatus(clientActive, LoanStatus.LATE)).thenReturn(0L);
         when(loanRepository.findByClientAndStatusAndTotalPenaltyGreaterThan(clientActive, LoanStatus.RECEIVED, 0.0))
                 .thenReturn(Collections.emptyList());
         
-        // 2. Mockear la herramienta que fallará la validación
+        // 2. The tool that fails the validation
         when(toolRepository.findById(toolId)).thenReturn(Optional.of(toolLoaned));
 
-        // ACT & ASSERT: Debe fallar con InvalidOperationException si el estado no es AVAILABLE
-        assertThrows(InvalidOperationException.class, () -> { // <-- EXCEPCIÓN CORREGIDA
+        // ACT & ASSERT: InvalidOperationException when the status is not AVAILABLE
+        assertThrows(InvalidOperationException.class, () -> {
             loanService.createLoan(1L, toolId, LocalDate.now(), LocalDate.now().plusDays(1), testUser);
-        }, "Debe lanzar InvalidOperationException si el estado no es AVAILABLE.");
+        }, "Must throw InvalidOperationException when the status is not AVAILABLE.");
 
-        // VERIFY: Verificar que falló después de las validaciones de cliente pero antes de guardar
+        // VERIFY: it failed after the client validations and before saving
         verify(loanRepository, times(1)).countByClientAndStatus(clientActive, LoanStatus.LATE);
         verify(loanRepository, times(1)).findByClientAndStatusAndTotalPenaltyGreaterThan(clientActive, LoanStatus.RECEIVED, 0.0);
         verify(toolRepository, times(1)).findById(toolId);
-        verify(loanRepository, never()).save(any()); // Nunca debe guardar
+        verify(loanRepository, never()).save(any()); // must never save
     }
 
     @Test
     void createLoan_Fails_WhenToolIsAvailableButStockIsZero() {
-        // ARRANGE: Herramienta AVAILABLE pero con stock 0
+        // ARRANGE: AVAILABLE tool with stock 0
         Long toolId = 21L;
         ToolEntity toolOutOfStock = ToolEntity.builder()
                 .id(toolId)
-                .stock(0) // <-- Stock INVÁLIDO
-                .status(ToolStatus.AVAILABLE) // <-- Estado VÁLIDO
+                .stock(0) // <-- INVALID stock
+                .status(ToolStatus.AVAILABLE) // <-- VALID status
                 .build();
 
-        // Mockeo:
-        // 1. Validaciones previas (Cliente y Deudas) pasan
+        // Mocks:
+        // 1. Client and debt validations pass
         when(clientRepository.findById(1L)).thenReturn(Optional.of(clientActive));
         when(loanRepository.countByClientAndStatus(clientActive, LoanStatus.LATE)).thenReturn(0L);
         when(loanRepository.findByClientAndStatusAndTotalPenaltyGreaterThan(clientActive, LoanStatus.RECEIVED, 0.0))
                 .thenReturn(Collections.emptyList());
         
-        // 2. Mockear la herramienta que fallará la validación
+        // 2. The tool that fails the validation
         when(toolRepository.findById(toolId)).thenReturn(Optional.of(toolOutOfStock));
 
-        // ACT & ASSERT: Debe fallar con InvalidOperationException si el stock es 0
-        assertThrows(InvalidOperationException.class, () -> { // <-- EXCEPCIÓN CORREGIDA
+        // ACT & ASSERT: InvalidOperationException when the stock is 0
+        assertThrows(InvalidOperationException.class, () -> {
             loanService.createLoan(1L, toolId, LocalDate.now(), LocalDate.now().plusDays(1), testUser);
-        }, "Debe lanzar InvalidOperationException si el stock es 0.");
+        }, "Must throw InvalidOperationException when the stock is 0.");
 
-        // VERIFY: Verificar que falló después de las validaciones de cliente pero antes de guardar
+        // VERIFY: it failed after the client validations and before saving
         verify(loanRepository, times(1)).countByClientAndStatus(clientActive, LoanStatus.LATE);
         verify(loanRepository, times(1)).findByClientAndStatusAndTotalPenaltyGreaterThan(clientActive, LoanStatus.RECEIVED, 0.0);
         verify(toolRepository, times(1)).findById(toolId);
-        verify(loanRepository, never()).save(any()); // Nunca debe guardar
+        verify(loanRepository, never()).save(any()); // must never save
     }
     
     @Test
     void createLoan_FailsWhenClientAlreadyHasThisToolActive() {
-        // ÉPICA 2: RN - No duplicidad de herramienta
-        // ARRANGE: Simular que el cliente 1 ya tiene la herramienta 10 activa
+        // EPIC 2: rule - the same tool cannot be loaned twice to a client
+        // ARRANGE: client 1 already has tool 10 on loan
         LocalDate today = LocalDate.now();
         LocalDate dueDate = today.plusDays(7);
 
-        // Simular un préstamo ACTIVO existente con la MISMA herramienta (toolAvailable)
+        // An existing ACTIVE loan with the SAME tool (toolAvailable)
         LoanEntity activeLoanForSameTool = LoanEntity.builder()
                 .client(clientActive)
-                .tool(toolAvailable) // <- La misma herramienta que se intenta pedir
+                .tool(toolAvailable) // <- the same tool being requested
                 .status(LoanStatus.ACTIVE)
                 .build();
 
-        // MOCKEO
+        // MOCK
         when(clientRepository.findById(1L)).thenReturn(Optional.of(clientActive));
         when(toolRepository.findById(10L)).thenReturn(Optional.of(toolAvailable));
         
-        // 1. Simular validaciones previas (LATE y RECEIVED)
-        when(loanRepository.countByClientAndStatus(clientActive, LoanStatus.LATE)).thenReturn(0L); // No tiene LATE (para check de límite)
+        // 1. Previous validations pass (LATE and RECEIVED)
+        when(loanRepository.countByClientAndStatus(clientActive, LoanStatus.LATE)).thenReturn(0L); // no LATE loans (used by the limit check)
         when(loanRepository.findByClientAndStatusAndTotalPenaltyGreaterThan(clientActive, LoanStatus.RECEIVED, 0.0))
-                .thenReturn(Collections.emptyList()); // No tiene deudas RECEIVED
+                .thenReturn(Collections.emptyList()); // no RECEIVED debts
 
-        // 2. Simular la validación de límite de 5 (asumimos que tiene < 5 activos)
+        // 2. Limit of 5 check (fewer than 5 active loans)
         when(loanRepository.findByClientAndStatus(clientActive, LoanStatus.ACTIVE))
-                .thenReturn(List.of(activeLoanForSameTool)); // Devuelve el préstamo duplicado
+                .thenReturn(List.of(activeLoanForSameTool)); // returns the duplicated loan
 
-        // ACT & ASSERT: Intenta crear el préstamo con la misma herramienta
+        // ACT & ASSERT: request the same tool again
         assertThrows(InvalidOperationException.class, () -> {
             loanService.createLoan(1L, 10L, today, dueDate, testUser);
-        }, "Debe fallar si el cliente ya tiene esta herramienta activa.");
+        }, "Must fail when the client already has this tool on loan.");
 
-        // Verificar que se llamó a los métodos correctos (y no a findAll)
+        // the expected queries were used (not findAll)
         verify(loanRepository, times(1)).countByClientAndStatus(clientActive, LoanStatus.LATE);
         verify(loanRepository, times(1)).findByClientAndStatusAndTotalPenaltyGreaterThan(clientActive, LoanStatus.RECEIVED, 0.0);
-        // Verifica el 'findByClientAndStatus(ACTIVE)' (tanto para límite de 5 como para duplicidad)
+        // findByClientAndStatus(ACTIVE) is used by both the limit and the duplicate check
         verify(loanRepository, times(2)).findByClientAndStatus(clientActive, LoanStatus.ACTIVE); 
         
-        // NO debe llamar a 'findByClientAndStatus(LATE)' para el stream, porque el '||' hace short-circuit
+        // findByClientAndStatus(LATE) is NOT streamed because the OR short-circuits
         verify(loanRepository, never()).findByClientAndStatus(clientActive, LoanStatus.LATE);
         
-        verify(loanRepository, never()).save(any()); // No debe guardar
-        verify(loanRepository, never()).findAll(); // NUNCA debe llamar a findAll
+        verify(loanRepository, never()).save(any()); // must not save
+        verify(loanRepository, never()).findAll(); // must NEVER call findAll
     }
 
     @Test
     void createLoan_FailsWhenClientHasUnpaidReceivedLoans() {
-        // ARRANGE: Cliente activo pero con una deuda pendiente
+        // ARRANGE: active client with a pending debt
         LocalDate today = LocalDate.now();
         LocalDate dueDate = today.plusDays(7);
 
-        // Simular un préstamo anterior en estado RECEIVED con penalidad > 0
+        // A previous RECEIVED loan with penalty > 0
         LoanEntity unpaidReceivedLoan = LoanEntity.builder()
-                .client(clientActive) // Usamos clientActive definido en setUp
+                .client(clientActive) // clientActive from setUp
                 .status(LoanStatus.RECEIVED)
-                .totalPenalty(5000.0) // Deuda pendiente
+                .totalPenalty(5000.0) // pending debt
                 .build();
 
-        // Mockeo:
-        // 1. Encontrar al cliente activo
+        // Mocks:
+        // 1. Find the active client
         when(clientRepository.findById(clientActive.getId())).thenReturn(Optional.of(clientActive));
-        // 2. Encontrar la herramienta disponible
+        // 2. Find the available tool
         when(toolRepository.findById(toolAvailable.getId())).thenReturn(Optional.of(toolAvailable));
-        // 3. No tiene préstamos LATE
+        // 3. No LATE loans
         when(loanRepository.countByClientAndStatus(clientActive, LoanStatus.LATE)).thenReturn(0L);
-        // 4. SIMULAR QUE TIENE DEUDAS PENDIENTES (devuelve lista no vacía)
+        // 4. The client HAS pending debts (non-empty list)
         when(loanRepository.findByClientAndStatusAndTotalPenaltyGreaterThan(clientActive, LoanStatus.RECEIVED, 0.0))
-                .thenReturn(List.of(unpaidReceivedLoan)); // Lista contiene la deuda
+                .thenReturn(List.of(unpaidReceivedLoan)); // list with the debt
 
-        // ACT & ASSERT: Esperamos que lance InvalidOperationException
+        // ACT & ASSERT: InvalidOperationException expected
         assertThrows(InvalidOperationException.class, () -> {
             loanService.createLoan(clientActive.getId(), toolAvailable.getId(), today, dueDate, testUser);
-        }, "Debe lanzar InvalidOperationException porque el cliente tiene deudas pendientes.");
+        }, "Must throw InvalidOperationException because the client has pending debts.");
 
-        // Verificar que se hicieron las comprobaciones hasta el punto de fallo
+        // checks were made up to the failure point
         verify(clientRepository, times(1)).findById(clientActive.getId());
-        verify(toolRepository, times(1)).findById(toolAvailable.getId()); // Verifica la herramienta también
+        verify(toolRepository, times(1)).findById(toolAvailable.getId()); // the tool was loaded too
         verify(loanRepository, times(1)).countByClientAndStatus(clientActive, LoanStatus.LATE);
         verify(loanRepository, times(1)).findByClientAndStatusAndTotalPenaltyGreaterThan(clientActive, LoanStatus.RECEIVED, 0.0);
-        // VERIFICACIÓN CRÍTICA: Asegurarse de que NO se intentó guardar el nuevo préstamo
+        // CRITICAL: the new loan was NOT saved
         verify(loanRepository, never()).save(any(LoanEntity.class));
-        // VERIFICACIÓN CRÍTICA: Asegurarse de que NO se intentó decrementar el stock
+        // CRITICAL: the stock was NOT decremented
         verify(toolService, never()).decrementStockForLoan(any(ToolEntity.class), any(UserEntity.class));
     }
 
 @Test
     void createLoan_FailsWhenClientHasLateLoans() {
-        // ARRANGE: Cliente activo pero con préstamos atrasados
+        // ARRANGE: active client with late loans
         LocalDate today = LocalDate.now();
         LocalDate dueDate = today.plusDays(7);
 
-        // Mockeo:
-        // 1. Encontrar al cliente activo
+        // Mocks:
+        // 1. Find the active client
         when(clientRepository.findById(clientActive.getId())).thenReturn(Optional.of(clientActive));
-        // 2. Encontrar la herramienta disponible
+        // 2. Find the available tool
         when(toolRepository.findById(toolAvailable.getId())).thenReturn(Optional.of(toolAvailable));
-        // 3. SIMULAR QUE TIENE PRÉSTAMOS LATE (devolver > 0)
-        when(loanRepository.countByClientAndStatus(clientActive, LoanStatus.LATE)).thenReturn(1L); // Tiene 1 préstamo LATE
+        // 3. The client HAS LATE loans (> 0)
+        when(loanRepository.countByClientAndStatus(clientActive, LoanStatus.LATE)).thenReturn(1L); // 1 LATE loan
 
-        // ACT & ASSERT: Esperamos que lance InvalidOperationException
+        // ACT & ASSERT: InvalidOperationException expected
         assertThrows(InvalidOperationException.class, () -> {
             loanService.createLoan(clientActive.getId(), toolAvailable.getId(), today, dueDate, testUser);
-        }, "Debe lanzar InvalidOperationException porque el cliente tiene préstamos LATE.");
+        }, "Must throw InvalidOperationException because the client has LATE loans.");
 
-        // Verificar que se hicieron las comprobaciones hasta el punto de fallo
+        // checks were made up to the failure point
         verify(clientRepository, times(1)).findById(clientActive.getId());
         verify(toolRepository, times(1)).findById(toolAvailable.getId());
         verify(loanRepository, times(1)).countByClientAndStatus(clientActive, LoanStatus.LATE);
-        // VERIFICACIÓN CRÍTICA: Asegurarse de que NO continuó verificando deudas RECEIVED
+        // CRITICAL: RECEIVED debts were NOT checked afterwards
         verify(loanRepository, never()).findByClientAndStatusAndTotalPenaltyGreaterThan(any(ClientEntity.class), any(LoanStatus.class), anyDouble());
-        // VERIFICACIÓN CRÍTICA: Asegurarse de que NO se intentó guardar el nuevo préstamo
+        // CRITICAL: the new loan was NOT saved
         verify(loanRepository, never()).save(any(LoanEntity.class));
-        // VERIFICACIÓN CRÍTICA: Asegurarse de que NO se intentó decrementar el stock
+        // CRITICAL: the stock was NOT decremented
         verify(toolService, never()).decrementStockForLoan(any(ToolEntity.class), any(UserEntity.class));
     }
 
     // =========================================================================================================
-    // ÉPICA 2: TESTS PARA returnLoan (Devoluciones, Multas y Restricciones)
+    // EPIC 2: returnLoan (returns, fees and restrictions)
     // =========================================================================================================
 
     @Test
     void returnLoan_SuccessOnTimeNoDamage_SetsStatusToReceivedAndRestrictsClient() {
-        // ARRANGE: Préstamo devuelto a tiempo (returnDate = dueDate) y sin daños
+        // ARRANGE: returned on time (returnDate = dueDate), no damage
         LocalDate startDate = LocalDate.now().minusDays(5);
-        LocalDate dueDate = LocalDate.now(); // Vence hoy
-        LocalDate returnDate = LocalDate.now(); // Se devuelve hoy
+        LocalDate dueDate = LocalDate.now(); // due today
+        LocalDate returnDate = LocalDate.now(); // returned today
         Long loanId = 5L;
         
         LoanEntity loan = LoanEntity.builder()
@@ -379,37 +379,37 @@ public class LoanServiceTest {
                 .totalPenalty(0.0)
                 .build();
 
-        // MOCKEO:
+        // MOCK:
         when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
-        // Mockear tarifa de arriendo (la única necesaria aquí)
+        // Daily rental fee (the only tariff needed here)
         when(tariffService.getDailyRentFee()).thenReturn(1000.0);
-        when(loanRepository.save(any(LoanEntity.class))).thenAnswer(invocation -> invocation.getArgument(0)); // Devolver la entidad guardada
+        when(loanRepository.save(any(LoanEntity.class))).thenAnswer(invocation -> invocation.getArgument(0)); // returns the saved entity
 
-        // ACT (Devuelto hoy, a tiempo)
+        // ACT (returned today, on time)
         LoanEntity returnedLoan = loanService.returnLoan(loanId, toolAvailable.getId(), false, false, testUser, returnDate);
         
         // ASSERT
-        // Días de arriendo (pactados) = 5
+        // Agreed rental days = 5
         long rentalDays = ChronoUnit.DAYS.between(startDate, dueDate); // 5
         double expectedRentalCost = rentalDays * 1000.0; // 5000.0
 
-        // 1. El estado debe ser RECEIVED (pendiente de pago)
+        // 1. Status RECEIVED (payment pending)
         assertEquals(LoanStatus.RECEIVED, returnedLoan.getStatus());
-        // 2. La penalidad debe ser el costo del arriendo
+        // 2. The penalty is the rental cost
         assertEquals(expectedRentalCost, returnedLoan.getTotalPenalty(), 0.01); // 5000.0
 
-        // 3. Se actualiza el stock
+        // 3. The stock is updated
         verify(toolService, times(1)).incrementStockForReturn(toolAvailable, testUser);
-        // 4. El cliente DEBE ser restringido (porque totalPenalty > 0)
+        // 4. The client MUST be restricted (totalPenalty > 0)
         verify(clientService, times(1)).updateStatus(clientActive.getId(), ClientStatus.RESTRICTED);
     }
 
     @Test
     void returnLoan_AppliesLateFeeAndRentalFee_AndRestrictsClient() {
-        // ARRANGE: Préstamo atrasado 2 días
-        LocalDate startDate = LocalDate.now().minusDays(7); // Inició hace 7 días
-        LocalDate dueDate = LocalDate.now().minusDays(2);  // Vencía hace 2 días
-        LocalDate returnDate = LocalDate.now();            // Se devuelve hoy
+        // ARRANGE: returned 2 days late
+        LocalDate startDate = LocalDate.now().minusDays(7); // started 7 days ago
+        LocalDate dueDate = LocalDate.now().minusDays(2); // was due 2 days ago
+        LocalDate returnDate = LocalDate.now(); // returned today
         Long loanId = 6L;
         
         LoanEntity loan = LoanEntity.builder()
@@ -418,23 +418,23 @@ public class LoanServiceTest {
                 .tool(toolAvailable)
                 .startDate(startDate)
                 .dueDate(dueDate)
-                .status(LoanStatus.LATE) // o ACTIVE
+                .status(LoanStatus.LATE) // or ACTIVE
                 .totalPenalty(0.0)
                 .build();
 
         when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
-        when(tariffService.getDailyRentFee()).thenReturn(1000.0); // Tarifa arriendo
-        when(tariffService.getDailyLateFee()).thenReturn(2000.0); // Tarifa multa
+        when(tariffService.getDailyRentFee()).thenReturn(1000.0); // rental fee
+        when(tariffService.getDailyLateFee()).thenReturn(2000.0); // late fee
         when(loanRepository.save(any(LoanEntity.class))).thenReturn(loan);
         
-        // ACT (Se devuelve hoy, 2 días tarde)
+        // ACT (returned today, 2 days late)
         LoanEntity returnedLoan = loanService.returnLoan(loanId, toolAvailable.getId(), false, false, testUser, returnDate);
         
         // ASSERT
-        // Días de arriendo (pactados) = 5
+        // Agreed rental days = 5
         long rentalDays = ChronoUnit.DAYS.between(startDate, dueDate); // 5
         double expectedRentalCost = rentalDays * 1000.0; // 5000.0
-        // Días de atraso = 2
+        // Days late = 2
         long delayDays = ChronoUnit.DAYS.between(dueDate, returnDate); // 2
         double expectedLateFee = delayDays * 2000.0; // 4000.0
         
@@ -442,7 +442,7 @@ public class LoanServiceTest {
 
         assertEquals(expectedTotalPenalty, returnedLoan.getTotalPenalty(), 0.01); // Total 9000.0
         assertEquals(LoanStatus.RECEIVED, returnedLoan.getStatus());
-        // RN CRÍTICO: Debe restringir al cliente por la multa (Épica 3)
+        // CRITICAL RULE: the client is restricted because of the fee (Epic 3)
         verify(clientService, times(1)).updateStatus(clientActive.getId(), ClientStatus.RESTRICTED); 
         verify(toolService, times(1)).incrementStockForReturn(toolAvailable, testUser);
         verify(toolService, never()).markAsRepairing(any(), any());
@@ -451,54 +451,54 @@ public class LoanServiceTest {
     
     @Test
     void returnLoan_AppliesRepairFeeAndRentalFee_MarksRepairingAndRestrictsClient() {
-        // ARRANGE: Préstamo a tiempo (returnDate = dueDate), pero dañado
+        // ARRANGE: returned on time (returnDate = dueDate) but damaged
         Long loanId = 8L;
-        LocalDate startDate = LocalDate.now().minusDays(7); // Inició hace 7 días
-        LocalDate dueDate = LocalDate.now();                // Vence hoy
-        LocalDate returnDate = LocalDate.now();             // Se devuelve hoy
+        LocalDate startDate = LocalDate.now().minusDays(7); // started 7 days ago
+        LocalDate dueDate = LocalDate.now(); // due today
+        LocalDate returnDate = LocalDate.now(); // returned today
         
         LoanEntity loan = LoanEntity.builder()
             .id(loanId)
             .client(clientActive)
             .tool(toolAvailable)
-            .startDate(startDate) // <- Añadido
+            .startDate(startDate)
             .dueDate(dueDate) 
             .status(LoanStatus.ACTIVE)
             .totalPenalty(0.0).build();
         
         when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
-        when(tariffService.getDailyRentFee()).thenReturn(1000.0); // Tarifa arriendo
-        when(tariffService.getRepairFee()).thenReturn(1500.0);    // Tarifa reparación
+        when(tariffService.getDailyRentFee()).thenReturn(1000.0); // rental fee
+        when(tariffService.getRepairFee()).thenReturn(1500.0); // repair fee
         when(loanRepository.save(any(LoanEntity.class))).thenReturn(loan);
         
-        // ACT (Devuelto dañado, NO irreparable)
+        // ACT (damaged, NOT irreparable)
         LoanEntity returnedLoan = loanService.returnLoan(loanId, toolAvailable.getId(), true, false, testUser, returnDate);
         
         // ASSERT
-        // Días de arriendo (pactados) = 7
+        // Agreed rental days = 7
         long rentalDays = ChronoUnit.DAYS.between(startDate, dueDate); // 7
         double expectedRentalCost = rentalDays * 1000.0; // 7000.0
-        // Días de atraso = 0
-        // Cargo por reparación = 1500.0
+        // Days late = 0
+        // Repair charge = 1500.0
         
         double expectedTotalPenalty = expectedRentalCost + 1500.0; // 7000 + 1500 = 8500.0
 
         assertEquals(expectedTotalPenalty, returnedLoan.getTotalPenalty(), 0.01);
         assertEquals(LoanStatus.RECEIVED, returnedLoan.getStatus());
-        // RN CRÍTICO: Debe restringir al cliente por el cargo (Épica 3)
+        // CRITICAL RULE: the client is restricted because of the charge (Epic 3)
         verify(clientService, times(1)).updateStatus(clientActive.getId(), ClientStatus.RESTRICTED);
-        // Debe marcarse como REPAIRING (Épica 1)
+        // Must be marked as REPAIRING (Epic 1)
         verify(toolService, times(1)).markAsRepairing(toolAvailable, testUser);
-        verify(toolService, never()).incrementStockForReturn(any(), any()); // No vuelve a stock
+        verify(toolService, never()).incrementStockForReturn(any(), any()); // does not go back to stock
     }
 
     @Test
     void returnLoan_AppliesReplacementFeeAndLateFeeAndRentalFee_AndRestrictsClient() {
-        // ARRANGE: Préstamo ATRASADO 10 días y daño irreparable
+        // ARRANGE: 10 days LATE and irreparable damage
         Long loanId = 7L;
-        LocalDate startDate = LocalDate.now().minusDays(15); // Inició hace 15 días
-        LocalDate dueDate = LocalDate.now().minusDays(10); // Vencía hace 10 días
-        LocalDate returnDate = LocalDate.now();            // Se devuelve hoy
+        LocalDate startDate = LocalDate.now().minusDays(15); // started 15 days ago
+        LocalDate dueDate = LocalDate.now().minusDays(10); // was due 10 days ago
+        LocalDate returnDate = LocalDate.now(); // returned today
         
         ToolEntity irreparableTool = ToolEntity.builder().id(11L).replacementValue(50000).build();
         
@@ -506,57 +506,57 @@ public class LoanServiceTest {
             .id(loanId)
             .client(clientActive)
             .tool(irreparableTool)
-            .startDate(startDate) // <- Añadido
+            .startDate(startDate)
             .dueDate(dueDate) 
             .status(LoanStatus.LATE)
             .totalPenalty(0.0).build();
         
         when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
-        when(tariffService.getDailyRentFee()).thenReturn(1000.0); // Tarifa arriendo
-        when(tariffService.getDailyLateFee()).thenReturn(2000.0); // Tarifa multa
+        when(tariffService.getDailyRentFee()).thenReturn(1000.0); // rental fee
+        when(tariffService.getDailyLateFee()).thenReturn(2000.0); // late fee
 
         when(loanRepository.save(any(LoanEntity.class))).thenReturn(loan);
 
-        // ACT (Devuelto dañado e irreparable)
+        // ACT (damaged and irreparable)
         LoanEntity returnedLoan = loanService.returnLoan(loanId, 11L, true, true, testUser, returnDate);
         
         // ASSERT
-        // Días de arriendo (pactados) = 5
+        // Agreed rental days = 5
         long rentalDays = ChronoUnit.DAYS.between(startDate, dueDate); // 5
         double expectedRentalCost = rentalDays * 1000.0; // 5000.0
-        // Días de atraso = 10
+        // Days late = 10
         long delayDays = ChronoUnit.DAYS.between(dueDate, returnDate); // 10
         double expectedLateFee = delayDays * 2000.0; // 20000.0
-        // Cargo por reposición = 50000.0
+        // Replacement charge = 50000.0
         
         double expectedTotalPenalty = expectedRentalCost + expectedLateFee + 50000.0; // 5000 + 20000 + 50000 = 75000.0
 
         assertEquals(expectedTotalPenalty, returnedLoan.getTotalPenalty(), 0.01);
         assertEquals(LoanStatus.RECEIVED, returnedLoan.getStatus());
-        // RN CRÍTICO: Debe restringir al cliente por el cargo
+        // CRITICAL RULE: the client is restricted because of the charge
         verify(clientService, times(1)).updateStatus(clientActive.getId(), ClientStatus.RESTRICTED);
-        // Debe marcarse como DECOMMISSIONED (Épica 1)
+        // Must be marked as DECOMMISSIONED (Epic 1)
         verify(toolService, times(1)).markAsDecommissioned(irreparableTool, testUser);
         verify(toolService, never()).incrementStockForReturn(any(), any());
     }
     
     @Test
     void returnLoan_FailsWhenLoanStatusIsClosed() {
-        // ARRANGE: Simular un préstamo ya cerrado (CLOSED)
+        // ARRANGE: a loan that is already CLOSED
         Long loanId = 9L;
         LoanEntity loan = LoanEntity.builder()
                 .id(loanId)
-                .tool(toolAvailable) // toolAvailable tiene ID 10L
-                .status(LoanStatus.CLOSED) // <-- Estado inválido
+                .tool(toolAvailable) // toolAvailable has ID 10L
+                .status(LoanStatus.CLOSED) // <-- invalid status
                 .build();
 
         when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
         
-        // ACT & ASSERT: Debe fallar si el estado no es ACTIVE o LATE
+        // ACT & ASSERT: fails when the status is not ACTIVE or LATE
         assertThrows(InvalidOperationException.class, () -> 
-            // Usamos toolAvailable.getId() (que es 10L)
+            // toolAvailable.getId() is 10L
             loanService.returnLoan(loanId, toolAvailable.getId(), false, false, testUser, LocalDate.now()),
-            "Solo se pueden devolver préstamos activos o atrasados.");
+            "Only active or late loans can be returned.");
 
         verify(loanRepository, times(1)).findById(loanId);
         verify(loanRepository, never()).save(any());
@@ -564,16 +564,16 @@ public class LoanServiceTest {
     }
 
     // =========================================================================================================
-    // ÉPICA 4 / 2: TEST PARA CÁLCULO DE TARIFA DE ARRIENDO (returnLoan)
+    // EPIC 4 / 2: RENTAL FEE CALCULATION (returnLoan)
     // =========================================================================================================
 
     @Test
     void returnLoan_CalculatesRentalFeeCorrectly_WhenReturnedEarly() {
-        // ARRANGE: Préstamo devuelto anticipadamente
+        // ARRANGE: returned early
         Long loanId = 15L;
-        LocalDate startDate = LocalDate.now().minusDays(3); // Inició hace 3 días
-        LocalDate dueDate = LocalDate.now().plusDays(5); // Vencimiento en 5 días
-        LocalDate returnDate = LocalDate.now(); // Devuelto hoy (anticipado)
+        LocalDate startDate = LocalDate.now().minusDays(3); // started 3 days ago
+        LocalDate dueDate = LocalDate.now().plusDays(5); // due in 5 days
+        LocalDate returnDate = LocalDate.now(); // returned today (early)
 
         LoanEntity loan = LoanEntity.builder()
             .id(loanId)
@@ -585,21 +585,21 @@ public class LoanServiceTest {
             .totalPenalty(0.0)
             .build();
 
-        // MOCKEO:
+        // MOCK:
         when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
         when(tariffService.getDailyRentFee()).thenReturn(1000.0);
         when(loanRepository.save(any(LoanEntity.class))).thenReturn(loan);
 
-        // ACT: Devolver la herramienta sin daño y sin atraso
+        // ACT: return without damage and without delay
         LoanEntity returnedLoan = loanService.returnLoan(loanId, toolAvailable.getId(), false, false, testUser, returnDate);
 
         // ASSERT:
-        // Días de arriendo (pactados) = 8 (entre startDate y dueDate)
+        // Agreed rental days = 8 (between startDate and dueDate)
         long rentalDays = ChronoUnit.DAYS.between(startDate, dueDate); // 8
         double expectedRentalCost = rentalDays * 1000.0; // 8000.0
 
         assertEquals(expectedRentalCost, returnedLoan.getTotalPenalty(), 0.01); // 8000.0
-        assertEquals(LoanStatus.RECEIVED, returnedLoan.getStatus()); // Estado debe ser RECEIVED
+        assertEquals(LoanStatus.RECEIVED, returnedLoan.getStatus()); // status must be RECEIVED
         
         verify(toolService, times(1)).incrementStockForReturn(toolAvailable, testUser);
         verify(clientService, times(1)).updateStatus(clientActive.getId(), ClientStatus.RESTRICTED);
@@ -607,11 +607,11 @@ public class LoanServiceTest {
 
     @Test
     void returnLoan_AppliesMinimumOneDayRentalFee_WhenStartDateEqualsDueDate() {
-        // ARRANGE: Préstamo pactado para el mismo día (startDate = dueDate)
+        // ARRANGE: loan due the same day (startDate = dueDate)
         Long loanId = 16L;
         LocalDate startDate = LocalDate.now();
-        LocalDate dueDate = LocalDate.now(); // Vence el mismo día
-        LocalDate returnDate = LocalDate.now(); // Devuelto el mismo día
+        LocalDate dueDate = LocalDate.now(); // due the same day
+        LocalDate returnDate = LocalDate.now(); // returned the same day
 
         LoanEntity loan = LoanEntity.builder()
             .id(loanId)
@@ -624,16 +624,16 @@ public class LoanServiceTest {
             .build();
 
         when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
-        when(tariffService.getDailyRentFee()).thenReturn(1000.0); // Tarifa 1000
+        when(tariffService.getDailyRentFee()).thenReturn(1000.0); // fee 1000
         when(loanRepository.save(any(LoanEntity.class))).thenReturn(loan);
 
-        // ACT: Devolver sin daño/atraso el mismo día
+        // ACT: return the same day, no damage or delay
         LoanEntity returnedLoan = loanService.returnLoan(loanId, toolAvailable.getId(), false, false, testUser, returnDate);
 
         // ASSERT:
-        // Días de arriendo (pactados) = 0.
-        // El servicio aplica la regla (if rentalDays < 1) rentalDays = 1.
-        double expectedRentalCost = 1 * 1000.0; // 1000.0 (Mínimo 1 día)
+        // Agreed rental days = 0.
+        // The service applies the rule: if rentalDays < 1 then rentalDays = 1.
+        double expectedRentalCost = 1 * 1000.0; // 1000.0 (minimum 1 day)
 
         assertEquals(expectedRentalCost, returnedLoan.getTotalPenalty(), 0.01);
         assertEquals(LoanStatus.RECEIVED, returnedLoan.getStatus());
@@ -644,101 +644,101 @@ public class LoanServiceTest {
 
 @Test
     void returnLoan_AppliesLateFeeAndRepairFee_WhenLateAndDamagedRepairable() {
-        // ARRANGE: Préstamo atrasado 2 días y con daño reparable
+        // ARRANGE: 2 days late with repairable damage
         Long loanId = 11L;
-        LocalDate startDate = LocalDate.now().minusDays(10); // Inicio hace 10 días
-        LocalDate dueDate = LocalDate.now().minusDays(2);  // Vencía hace 2 días
-        LocalDate returnDate = LocalDate.now();           // Se devuelve hoy (2 días tarde)
+        LocalDate startDate = LocalDate.now().minusDays(10); // started 10 days ago
+        LocalDate dueDate = LocalDate.now().minusDays(2); // was due 2 days ago
+        LocalDate returnDate = LocalDate.now(); // returned today (2 days late)
 
         LoanEntity loan = LoanEntity.builder()
                 .id(loanId)
-                .client(clientActive) // Cliente activo del setUp
-                .tool(toolAvailable) // Herramienta disponible del setUp
+                .client(clientActive) // active client from setUp
+                .tool(toolAvailable) // available tool from setUp
                 .startDate(startDate)
                 .dueDate(dueDate)
-                .status(LoanStatus.LATE) // Podría estar LATE o ACTIVE, el cálculo es igual
+                .status(LoanStatus.LATE) // LATE or ACTIVE: the calculation is the same
                 .totalPenalty(0.0)
                 .build();
 
-        // MOCKEO:
+        // MOCK:
         when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
-        // Necesitamos toolRepository.findById si returnLoan lo busca, aunque lo obtiene del préstamo
+        // The tool comes from the loan, no toolRepository.findById needed
         // when(toolRepository.findById(toolAvailable.getId())).thenReturn(Optional.of(toolAvailable));
-        when(tariffService.getDailyLateFee()).thenReturn(2000.0);    // Multa diaria
-        when(tariffService.getRepairFee()).thenReturn(1500.0);     // Cargo reparación
-        when(tariffService.getDailyRentFee()).thenReturn(1000.0);   // Tarifa arriendo diaria
-        when(loanRepository.save(any(LoanEntity.class))).thenReturn(loan); // Simular guardado
+        when(tariffService.getDailyLateFee()).thenReturn(2000.0); // daily late fee
+        when(tariffService.getRepairFee()).thenReturn(1500.0); // repair fee
+        when(tariffService.getDailyRentFee()).thenReturn(1000.0); // daily rental fee
+        when(loanRepository.save(any(LoanEntity.class))).thenReturn(loan); // simulated save
 
-        // ACT: Devolver con atraso y daño reparable
+        // ACT: late return with repairable damage
         LoanEntity returnedLoan = loanService.returnLoan(loanId, toolAvailable.getId(), true, false, testUser, returnDate);
 
-        // ASSERT: Calcular penalidad total esperada
-        // Días de arriendo = 8 (desde startDate hasta dueDate)
+        // ASSERT: expected total penalty
+        // Rental days = 8 (from startDate to dueDate)
         long rentalDays = ChronoUnit.DAYS.between(startDate, dueDate);
-        if (rentalDays < 1) rentalDays = 1; // Mínimo 1 día
+        if (rentalDays < 1) rentalDays = 1; // minimum 1 day
         double expectedRentalCost = rentalDays * 1000.0; // 8 * 1000 = 8000
-        // Días de atraso = 2
+        // Days late = 2
         long delayDays = ChronoUnit.DAYS.between(dueDate, returnDate);
         double expectedLateFee = delayDays * 2000.0; // 2 * 2000 = 4000
-        // Cargo por reparación
+        // Repair charge
         double expectedRepairFee = 1500.0;
         // Total
         double expectedTotalPenalty = expectedRentalCost + expectedLateFee + expectedRepairFee; // 8000 + 4000 + 1500 = 13500
 
         assertEquals(expectedTotalPenalty, returnedLoan.getTotalPenalty(), 0.01);
-        assertEquals(LoanStatus.RECEIVED, returnedLoan.getStatus()); // Estado cambia a RECEIVED
-        assertNotNull(returnedLoan.getReturnDate()); // Fecha de devolución guardada
+        assertEquals(LoanStatus.RECEIVED, returnedLoan.getStatus()); // status becomes RECEIVED
+        assertNotNull(returnedLoan.getReturnDate()); // return date saved
 
-        // Verificar interacciones con otros servicios
-        // Se marca como REPAIRING (NO incrementa stock)
+        // Interactions with other services
+        // Marked as REPAIRING (stock NOT incremented)
         verify(toolService, times(1)).markAsRepairing(eq(toolAvailable), eq(testUser));
-        verify(toolService, never()).incrementStockForReturn(any(), any()); // No debe incrementar stock
-        verify(toolService, never()).markAsDecommissioned(any(), any());   // No debe darse de baja
-        // Cliente queda RESTRINGIDO
+        verify(toolService, never()).incrementStockForReturn(any(), any()); // must not increment stock
+        verify(toolService, never()).markAsDecommissioned(any(), any()); // must not be decommissioned
+        // The client stays RESTRICTED
         verify(clientService, times(1)).updateStatus(clientActive.getId(), ClientStatus.RESTRICTED);
-        // Se guarda el préstamo
+        // The loan is saved
         verify(loanRepository, times(1)).save(loan);
     }
 
 @Test
     void returnLoan_AppliesLateFeeAndReplacementFee_WhenLateAndDamagedIrreparable() {
-        // ARRANGE: Préstamo atrasado 3 días y con daño irreparable
+        // ARRANGE: 3 days late with irreparable damage
         Long loanId = 12L;
-        LocalDate startDate = LocalDate.now().minusDays(10); // Inicio hace 10 días
-        LocalDate dueDate = LocalDate.now().minusDays(3);  // Vencía hace 3 días
-        LocalDate returnDate = LocalDate.now();           // Se devuelve hoy (3 días tarde)
+        LocalDate startDate = LocalDate.now().minusDays(10); // started 10 days ago
+        LocalDate dueDate = LocalDate.now().minusDays(3); // was due 3 days ago
+        LocalDate returnDate = LocalDate.now(); // returned today (3 days late)
 
-        // Usar la herramienta del setUp que tiene replacementValue = 45000
+        // Tool from setUp with replacementValue = 45000
         LoanEntity loan = LoanEntity.builder()
                 .id(loanId)
                 .client(clientActive)
-                .tool(toolAvailable) // toolAvailable tiene replacementValue = 45000
+                .tool(toolAvailable) // toolAvailable has replacementValue = 45000
                 .startDate(startDate)
                 .dueDate(dueDate)
                 .status(LoanStatus.LATE)
                 .totalPenalty(0.0)
                 .build();
 
-        // MOCKEO:
+        // MOCK:
         when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
-        // No necesitamos mockear toolRepository.findById si usamos la herramienta del préstamo
-        when(tariffService.getDailyLateFee()).thenReturn(2000.0);    // Multa diaria
-        when(tariffService.getDailyRentFee()).thenReturn(1000.0);   // Tarifa arriendo diaria
-        // NO necesitamos mockear tariffService.getRepairFee()
-        when(loanRepository.save(any(LoanEntity.class))).thenReturn(loan); // Simular guardado
+        // The tool comes from the loan, no toolRepository.findById needed
+        when(tariffService.getDailyLateFee()).thenReturn(2000.0); // daily late fee
+        when(tariffService.getDailyRentFee()).thenReturn(1000.0); // daily rental fee
+        // tariffService.getRepairFee() is NOT needed
+        when(loanRepository.save(any(LoanEntity.class))).thenReturn(loan); // simulated save
 
-        // ACT: Devolver con atraso y daño irreparable
+        // ACT: late return with irreparable damage
         LoanEntity returnedLoan = loanService.returnLoan(loanId, toolAvailable.getId(), true, true, testUser, returnDate);
 
-        // ASSERT: Calcular penalidad total esperada
-        // Días de arriendo = 7 (desde startDate hasta dueDate)
+        // ASSERT: expected total penalty
+        // Rental days = 7 (from startDate to dueDate)
         long rentalDays = ChronoUnit.DAYS.between(startDate, dueDate);
         if (rentalDays < 1) rentalDays = 1;
         double expectedRentalCost = rentalDays * 1000.0; // 7 * 1000 = 7000
-        // Días de atraso = 3
+        // Days late = 3
         long delayDays = ChronoUnit.DAYS.between(dueDate, returnDate);
         double expectedLateFee = delayDays * 2000.0; // 3 * 2000 = 6000
-        // Cargo por reposición (viene de toolAvailable.getReplacementValue())
+        // Replacement charge (from toolAvailable.getReplacementValue())
         double expectedReplacementFee = toolAvailable.getReplacementValue(); // 45000
         // Total
         double expectedTotalPenalty = expectedRentalCost + expectedLateFee + expectedReplacementFee; // 7000 + 6000 + 45000 = 58000
@@ -747,24 +747,24 @@ public class LoanServiceTest {
         assertEquals(LoanStatus.RECEIVED, returnedLoan.getStatus());
         assertEquals(returnDate, returnedLoan.getReturnDate());
 
-        // Verificar interacciones con otros servicios
-        // Se marca como DECOMMISSIONED
+        // Interactions with other services
+        // Marked as DECOMMISSIONED
         verify(toolService, times(1)).markAsDecommissioned(eq(toolAvailable), eq(testUser));
-        verify(toolService, never()).incrementStockForReturn(any(), any()); // No debe incrementar stock
-        verify(toolService, never()).markAsRepairing(any(), any());       // No debe marcar para reparar
-        // Cliente queda RESTRINGIDO
+        verify(toolService, never()).incrementStockForReturn(any(), any()); // must not increment stock
+        verify(toolService, never()).markAsRepairing(any(), any()); // must not be sent to repair
+        // The client stays RESTRICTED
         verify(clientService, times(1)).updateStatus(clientActive.getId(), ClientStatus.RESTRICTED);
-        // Se guarda el préstamo
+        // The loan is saved
         verify(loanRepository, times(1)).save(loan);
     }
 
 @Test
     void returnLoan_AppliesOnlyRentalFee_WhenReturnedEarlyNoDamage() {
-        // ARRANGE: Préstamo devuelto 2 días ANTES de la fecha de vencimiento
+        // ARRANGE: returned 2 days BEFORE the due date
         Long loanId = 13L;
-        LocalDate startDate = LocalDate.now().minusDays(5); // Inicio hace 5 días
-        LocalDate dueDate = LocalDate.now().plusDays(2);  // Vencía en 2 días más
-        LocalDate returnDate = LocalDate.now();           // Se devuelve hoy (2 días antes)
+        LocalDate startDate = LocalDate.now().minusDays(5); // started 5 days ago
+        LocalDate dueDate = LocalDate.now().plusDays(2); // due in 2 days
+        LocalDate returnDate = LocalDate.now(); // returned today (2 days early)
 
         LoanEntity loan = LoanEntity.builder()
                 .id(loanId)
@@ -776,147 +776,147 @@ public class LoanServiceTest {
                 .totalPenalty(0.0)
                 .build();
 
-        // MOCKEO:
+        // MOCK:
         when(loanRepository.findById(loanId)).thenReturn(Optional.of(loan));
-        when(tariffService.getDailyRentFee()).thenReturn(1000.0); // Tarifa arriendo diaria
-        // NO necesitamos mockear getDailyLateFee ni getRepairFee
+        when(tariffService.getDailyRentFee()).thenReturn(1000.0); // daily rental fee
+        // getDailyLateFee and getRepairFee are NOT needed
         when(loanRepository.save(any(LoanEntity.class))).thenReturn(loan);
 
-        // ACT: Devolver anticipadamente y sin daños
+        // ACT: early return without damage
         LoanEntity returnedLoan = loanService.returnLoan(loanId, toolAvailable.getId(), false, false, testUser, returnDate);
 
-        // ASSERT: Calcular penalidad total esperada
-        // Días transcurridos = 5 (desde startDate hasta returnDate)
-        // La RN dice que se cobra hasta la fecha pactada (dueDate) aunque se devuelva antes
-        // ¡CORRECCIÓN SEGÚN RN!: "Si la devolución se realiza antes de la fecha pactada, no hay devoluciones de dinero (tarifa mínima siempre es 1 día)." 
-        // Esto implica que se cobra como si se hubiera devuelto en la fecha pactada (dueDate).
-        long rentalDaysCharged = ChronoUnit.DAYS.between(startDate, dueDate); // 7 días
-        if (rentalDaysCharged < 1) rentalDaysCharged = 1; // Mínimo 1 día
+        // ASSERT: expected total penalty
+        // Elapsed days = 5 (from startDate to returnDate)
+        // Business rule: the rent is charged up to the agreed date (dueDate) even if returned earlier
+        // ("If the return happens before the agreed date there are no refunds; the minimum charge is always 1 day")
+        // So the charge is computed as if it had been returned on the due date.
+        long rentalDaysCharged = ChronoUnit.DAYS.between(startDate, dueDate); // 7 days
+        if (rentalDaysCharged < 1) rentalDaysCharged = 1; // minimum 1 day
         double expectedRentalCost = rentalDaysCharged * 1000.0; // 7 * 1000 = 7000
 
-        // Multa por atraso debe ser CERO
+        // Late fee must be ZERO
         double expectedLateFee = 0.0;
-        // Cargo por daño debe ser CERO
+        // Damage charge must be ZERO
         double expectedDamagePenalty = 0.0;
-        // Total esperado = Solo costo de arriendo hasta fecha pactada
+        // Expected total = rent up to the agreed date only
         double expectedTotalPenalty = expectedRentalCost + expectedLateFee + expectedDamagePenalty; // 7000
 
         assertEquals(expectedTotalPenalty, returnedLoan.getTotalPenalty(), 0.01);
-        assertEquals(LoanStatus.RECEIVED, returnedLoan.getStatus()); // Cambia a RECEIVED
+        assertEquals(LoanStatus.RECEIVED, returnedLoan.getStatus()); // becomes RECEIVED
         assertEquals(returnDate, returnedLoan.getReturnDate());
 
-        // Verificar interacciones con otros servicios
-        // Se incrementa stock
+        // Interactions with other services
+        // Stock is incremented
         verify(toolService, times(1)).incrementStockForReturn(eq(toolAvailable), eq(testUser));
         verify(toolService, never()).markAsRepairing(any(), any());
         verify(toolService, never()).markAsDecommissioned(any(), any());
-        // Cliente queda RESTRINGIDO porque totalPenalty > 0
+        // The client stays RESTRICTED because totalPenalty > 0
         verify(clientService, times(1)).updateStatus(clientActive.getId(), ClientStatus.RESTRICTED);
-        // Se guarda el préstamo
+        // The loan is saved
         verify(loanRepository, times(1)).save(loan);
     }
 
     // =========================================================================================================
-    // MÉTODO: markLoanAsPaid
+    // METHOD: markLoanAsPaid
     // =========================================================================================================
 
     @Test
     void markLoanAsPaid_Success_WhenLoanIsReceivedWithPenalty() {
-        // ARRANGE: Un préstamo en estado RECEIVED con una penalidad pendiente
+        // ARRANGE: a RECEIVED loan with a pending penalty
         Long loanId = 20L;
         LoanEntity receivedLoanWithPenalty = LoanEntity.builder()
                 .id(loanId)
-                .client(clientActive) // Cliente asociado (no relevante para la lógica directa, pero sí para el objeto)
-                .tool(toolAvailable)  // Herramienta asociada
-                .status(LoanStatus.RECEIVED) // Estado CORRECTO para esta operación
-                .totalPenalty(5000.0)       // Penalidad PENDIENTE
+                .client(clientActive) // client of the loan
+                .tool(toolAvailable) // tool of the loan
+                .status(LoanStatus.RECEIVED) // the CORRECT status for this operation
+                .totalPenalty(5000.0) // PENDING penalty
                 .build();
 
-        // Mockeo:
-        // 1. Encontrar el préstamo
+        // Mocks:
+        // 1. Find the loan
         when(loanRepository.findById(loanId)).thenReturn(Optional.of(receivedLoanWithPenalty));
-        // 2. Simular el guardado, devolviendo el objeto que se le pasa para verificar cambios
+        // 2. save returns the object it receives
         when(loanRepository.save(any(LoanEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        // ACT: Llamar al método para marcar como pagado
+        // ACT: mark as paid
         LoanEntity paidLoan = loanService.markLoanAsPaid(loanId);
 
-        // ASSERT: Verificar los cambios en el estado y la penalidad
+        // ASSERT: status and penalty changed
         assertNotNull(paidLoan);
         assertEquals(loanId, paidLoan.getId());
-        assertEquals(LoanStatus.CLOSED, paidLoan.getStatus()); // Estado DEBE cambiar a CLOSED
-        assertEquals(0.0, paidLoan.getTotalPenalty(), 0.01); // Penalidad DEBE ser 0.0
+        assertEquals(LoanStatus.CLOSED, paidLoan.getStatus()); // status MUST become CLOSED
+        assertEquals(0.0, paidLoan.getTotalPenalty(), 0.01); // penalty MUST be 0.0
 
-        // Verificar que se llamó a findById y save
+        // findById and save were called
         verify(loanRepository, times(1)).findById(loanId);
         verify(loanRepository, times(1)).save(argThat(loan ->
                 loan.getId().equals(loanId) &&
-                loan.getStatus().equals(LoanStatus.CLOSED) && // Verificar estado final
-                loan.getTotalPenalty() == 0.0                 // Verificar penalidad final
+                loan.getStatus().equals(LoanStatus.CLOSED) && // final status
+                loan.getTotalPenalty() == 0.0 // final penalty
         ));
 
-        // VERIFICACIÓN IMPORTANTE: Asegurarse de que NO se intentó cambiar el estado del cliente
+        // IMPORTANT: the client status was NOT changed
         verify(clientService, never()).updateStatus(anyLong(), any(ClientStatus.class));
     }
 
     @Test
     void markLoanAsPaid_Fails_WhenLoanStatusIsNotReceived() {
-        // ARRANGE: Un préstamo en estado ACTIVE (incorrecto para esta operación) (quizas probar con late o closed)
+        // ARRANGE: an ACTIVE loan (wrong status for this operation)
         Long loanId = 21L;
         LoanEntity activeLoan = LoanEntity.builder()
                 .id(loanId)
                 .client(clientActive)
                 .tool(toolAvailable)
-                .status(LoanStatus.ACTIVE) // Estado INCORRECTO
-                .totalPenalty(0.0) // Penalidad no relevante aquí, pero la ponemos
+                .status(LoanStatus.ACTIVE) // WRONG status
+                .totalPenalty(0.0) // irrelevant here
                 .build();
 
-        // Mockeo: Encontrar el préstamo activo
+        // Mock: find the active loan
         when(loanRepository.findById(loanId)).thenReturn(Optional.of(activeLoan));
 
-        // ACT & ASSERT: Esperamos que lance InvalidOperationException
+        // ACT & ASSERT: InvalidOperationException expected
         assertThrows(InvalidOperationException.class, () -> {
             loanService.markLoanAsPaid(loanId);
-        }, "Debe lanzar InvalidOperationException si el estado no es RECEIVED.");
+        }, "Must throw InvalidOperationException when the status is not RECEIVED.");
 
-        // Verificar que se llamó a findById
+        // findById was called
         verify(loanRepository, times(1)).findById(loanId);
-        // VERIFICACIÓN CRÍTICA: Asegurarse de que NUNCA se intentó guardar (cambiar estado o penalidad)
+        // CRITICAL: nothing was saved (status and penalty unchanged)
         verify(loanRepository, never()).save(any(LoanEntity.class));
-        // VERIFICACIÓN CRÍTICA: Asegurarse de que NO se intentó cambiar el estado del cliente
+        // CRITICAL: the client status was NOT changed
         verify(clientService, never()).updateStatus(anyLong(), any(ClientStatus.class));
 
     }
 
     @Test
     void markLoanAsPaid_Fails_WhenLoanNotFound() {
-        // ARRANGE: Un ID de préstamo que no existe
+        // ARRANGE: unknown loan ID
         Long nonExistentLoanId = 99L;
 
-        // Mockeo: findById devuelve Optional vacío para simular que no se encuentra
+        // Mock: findById returns an empty Optional
         when(loanRepository.findById(nonExistentLoanId)).thenReturn(Optional.empty());
 
-        // ACT & ASSERT: Esperamos que se lance ResourceNotFoundException
+        // ACT & ASSERT: ResourceNotFoundException expected
         assertThrows(ResourceNotFoundException.class, () -> {
             loanService.markLoanAsPaid(nonExistentLoanId);
-        }, "Debe lanzar ResourceNotFoundException si el préstamo no se encuentra.");
+        }, "Must throw ResourceNotFoundException when the loan is not found.");
 
-        // Verificar que se intentó buscar el préstamo una vez
+        // the loan was looked up once
         verify(loanRepository, times(1)).findById(nonExistentLoanId);
-        // VERIFICACIÓN CRÍTICA: Asegurarse de que NUNCA se intentó guardar nada
+        // CRITICAL: nothing was saved
         verify(loanRepository, never()).save(any(LoanEntity.class));
-        // VERIFICACIÓN CRÍTICA: Asegurarse de que NO se intentó cambiar el estado del cliente
+        // CRITICAL: the client status was NOT changed
         verify(clientService, never()).updateStatus(anyLong(), any(ClientStatus.class));
     }
 
     // =========================================================================================================
-    // MÉTODO: getUnpaidReceivedLoansByClientId
+    // METHOD: getUnpaidReceivedLoansByClientId
     // =========================================================================================================
 
     @Test
     void getUnpaidReceivedLoansByClientId_Success_WhenClientHasUnpaidLoans() {
-        // ARRANGE: Cliente existente y una lista simulada de préstamos RECEIVED con deuda
-        Long clientId = clientActive.getId(); // Usamos el cliente activo del setUp
+        // ARRANGE: existing client and a list of RECEIVED loans with debt
+        Long clientId = clientActive.getId(); // active client from setUp
         LoanEntity unpaidLoan1 = LoanEntity.builder()
                 .id(30L)
                 .client(clientActive)
@@ -931,25 +931,25 @@ public class LoanServiceTest {
                 .build();
         List<LoanEntity> unpaidLoansList = List.of(unpaidLoan1, unpaidLoan2);
 
-        // Mockeo:
-        // 1. Encontrar al cliente
+        // Mocks:
+        // 1. Find the client
         when(clientRepository.findById(clientId)).thenReturn(Optional.of(clientActive));
-        // 2. Simular que el repositorio devuelve la lista de deudas para ese cliente
+        // 2. The repository returns the debts of the client
         when(loanRepository.findByClientAndStatusAndTotalPenaltyGreaterThan(
                 clientActive, LoanStatus.RECEIVED, 0.0))
                 .thenReturn(unpaidLoansList);
 
-        // ACT: Llamar al método del servicio
+        // ACT
         List<LoanEntity> resultList = loanService.getUnpaidReceivedLoansByClientId(clientId);
 
-        // ASSERT: Verificar que la lista devuelta es la esperada
+        // ASSERT: the expected list is returned
         assertNotNull(resultList);
-        assertEquals(2, resultList.size()); // Esperamos 2 préstamos
-        // Podemos verificar IDs o penalidades si queremos ser más específicos
+        assertEquals(2, resultList.size()); // 2 loans expected
+        // IDs or penalties could also be checked
         assertTrue(resultList.stream().anyMatch(loan -> loan.getId().equals(30L) && loan.getTotalPenalty() == 2000.0));
         assertTrue(resultList.stream().anyMatch(loan -> loan.getId().equals(31L) && loan.getTotalPenalty() == 1500.0));
 
-        // Verificar que se llamó a los métodos correctos del repositorio
+        // the expected repository methods were called
         verify(clientRepository, times(1)).findById(clientId);
         verify(loanRepository, times(1)).findByClientAndStatusAndTotalPenaltyGreaterThan(
                 clientActive, LoanStatus.RECEIVED, 0.0);
@@ -957,25 +957,25 @@ public class LoanServiceTest {
 
     @Test
     void getUnpaidReceivedLoansByClientId_Success_ReturnsEmptyListWhenNoUnpaidLoans() {
-        // ARRANGE: Cliente existente sin deudas pendientes
+        // ARRANGE: existing client without pending debts
         Long clientId = clientActive.getId();
 
-        // Mockeo:
-        // 1. Encontrar al cliente
+        // Mocks:
+        // 1. Find the client
         when(clientRepository.findById(clientId)).thenReturn(Optional.of(clientActive));
-        // 2. SIMULAR QUE EL REPOSITORIO DEVUELVE UNA LISTA VACÍA
+        // 2. The repository returns an EMPTY list
         when(loanRepository.findByClientAndStatusAndTotalPenaltyGreaterThan(
                 clientActive, LoanStatus.RECEIVED, 0.0))
-                .thenReturn(Collections.emptyList()); // Lista vacía = sin deudas
+                .thenReturn(Collections.emptyList()); // empty list = no debts
 
-        // ACT: Llamar al método del servicio
+        // ACT
         List<LoanEntity> resultList = loanService.getUnpaidReceivedLoansByClientId(clientId);
 
-        // ASSERT: Verificar que la lista devuelta está vacía
+        // ASSERT: the list is empty
         assertNotNull(resultList);
-        assertTrue(resultList.isEmpty()); // La lista debe estar vacía
+        assertTrue(resultList.isEmpty()); // the list must be empty
 
-        // Verificar que se llamó a los métodos correctos del repositorio
+        // the expected repository methods were called
         verify(clientRepository, times(1)).findById(clientId);
         verify(loanRepository, times(1)).findByClientAndStatusAndTotalPenaltyGreaterThan(
                 clientActive, LoanStatus.RECEIVED, 0.0);
@@ -983,20 +983,20 @@ public class LoanServiceTest {
 
     @Test
     void getUnpaidReceivedLoansByClientId_Fails_WhenClientNotFound() {
-        // ARRANGE: Un ID de cliente que no existe
+        // ARRANGE: unknown client ID
         Long nonExistentClientId = 99L;
 
-        // Mockeo: findById del cliente devuelve Optional vacío
+        // Mock: findById returns an empty Optional
         when(clientRepository.findById(nonExistentClientId)).thenReturn(Optional.empty());
 
-        // ACT & ASSERT: Esperamos que se lance ResourceNotFoundException
+        // ACT & ASSERT: ResourceNotFoundException expected
         assertThrows(ResourceNotFoundException.class, () -> {
             loanService.getUnpaidReceivedLoansByClientId(nonExistentClientId);
-        }, "Debe lanzar ResourceNotFoundException si el cliente no se encuentra.");
+        }, "Must throw ResourceNotFoundException when the client is not found.");
 
-        // Verificar que se intentó buscar al cliente
+        // the client was looked up
         verify(clientRepository, times(1)).findById(nonExistentClientId);
-        // VERIFICACIÓN CRÍTICA: Asegurarse de que NO se intentó buscar préstamos
+        // CRITICAL: loans were NOT queried
         verify(loanRepository, never()).findByClientAndStatusAndTotalPenaltyGreaterThan(
                 any(ClientEntity.class), any(LoanStatus.class), anyDouble());
     }

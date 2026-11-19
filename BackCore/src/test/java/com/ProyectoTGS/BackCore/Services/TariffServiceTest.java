@@ -29,7 +29,7 @@ public class TariffServiceTest {
 
     @BeforeEach
     void setUp() {
-        // Simular la tarifa 
+        // Current tariff
         currentTariff = TariffEntity.builder()
                 .id(1L)
                 .dailyRentFee(5000)
@@ -39,12 +39,12 @@ public class TariffServiceTest {
     }
 
     // =======================================================================
-    // ÉPICA 4: CONSULTA DE TARIFAS (getTariff)
+    // EPIC 4: QUERY TARIFFS (getTariff)
     // =======================================================================
 
     @Test
     void getTariff_Success() {
-        // ARRANGE: Simular que la base de datos devuelve una lista con la tarifa actual
+        // ARRANGE: the database returns the current tariff
         when(tariffRepository.findAll()).thenReturn(List.of(currentTariff));
 
         // ACT
@@ -57,36 +57,36 @@ public class TariffServiceTest {
 
     @Test
     void getTariff_FailsIfNoTariffIsConfigured() {
-        // ARRANGE: Simular que la base de datos devuelve una lista vacía
+        // ARRANGE: the database returns an empty list
         when(tariffRepository.findAll()).thenReturn(Collections.emptyList());
 
-        // ACT & ASSERT: Debe fallar si no hay tarifas configuradas
+        // ACT & ASSERT: fails when no tariff is configured
         assertThrows(RuntimeException.class, () -> {
             tariffService.getTariff();
-        }, "Debe lanzar excepción si no hay tarifas configuradas.");
+        }, "Must throw when no tariff is configured.");
     }
 
     // =======================================================================
-    // ÉPICA 4: MODIFICACIÓN DE TARIFAS (updateTariff)
+    // EPIC 4: UPDATE TARIFFS (updateTariff)
     // =======================================================================
 
     @Test
     void updateTariff_Success() {
-        // ARRANGE: Tarifa con nuevos valores
+        // ARRANGE: new tariff values
         TariffEntity updatedValues = TariffEntity.builder()
                 .dailyRentFee(6000)
                 .dailyLateFee(3000)
                 .repairFee(2500)
                 .build();
 
-        // MOCKEO: 1. Obtener la tarifa actual, 2. Simular la persistencia
+        // MOCK: 1. current tariff, 2. persistence
         when(tariffRepository.findAll()).thenReturn(List.of(currentTariff));
         when(tariffRepository.save(any(TariffEntity.class))).thenReturn(currentTariff);
 
         // ACT
         TariffEntity result = tariffService.updateTariff(updatedValues);
 
-        // ASSERT: Verifica que los valores de la entidad original (currentTariff) se hayan actualizado
+        // ASSERT: the values of the existing entity (currentTariff) were updated
         assertEquals(6000, result.getDailyRentFee());
         assertEquals(3000, result.getDailyLateFee());
         verify(tariffRepository, times(1)).save(currentTariff);
@@ -129,42 +129,42 @@ public class TariffServiceTest {
     }
 
 // =======================================================================
-    // MÉTODOS GETTERS ESPECÍFICOS (por completitud)
+    // SPECIFIC GETTERS
     // =======================================================================
 
     @Test
     void getDailyLateFee_Success() {
-        // ARRANGE: Simular que getTariff() funciona
+        // ARRANGE: getTariff() returns the current tariff
         when(tariffRepository.findAll()).thenReturn(List.of(currentTariff));
 
         // ACT
         double fee = tariffService.getDailyLateFee();
 
         // ASSERT
-        assertEquals(2000, fee); // Valor del setUp
+        assertEquals(2000, fee); // value from setUp
     }
 
     @Test
     void getDailyRentFee_Success() {
-        // ARRANGE: Simular que getTariff() funciona
+        // ARRANGE: getTariff() returns the current tariff
         when(tariffRepository.findAll()).thenReturn(List.of(currentTariff));
 
         // ACT
         double fee = tariffService.getDailyRentFee();
 
         // ASSERT
-        assertEquals(5000, fee); // Valor del setUp
+        assertEquals(5000, fee); // value from setUp
     }
 
     @Test
     void getRepairFee_Success() {
-        // ARRANGE: Simular que getTariff() funciona
+        // ARRANGE: getTariff() returns the current tariff
         when(tariffRepository.findAll()).thenReturn(List.of(currentTariff));
 
         // ACT
         double fee = tariffService.getRepairFee();
 
         // ASSERT
-        assertEquals(1500, fee); // Valor del setUp
+        assertEquals(1500, fee); // value from setUp
     }
 }

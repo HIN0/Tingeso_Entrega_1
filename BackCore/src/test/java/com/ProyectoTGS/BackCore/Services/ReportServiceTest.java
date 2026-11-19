@@ -39,7 +39,7 @@ public class ReportServiceTest {
     @BeforeEach
     void setUp() {
 
-        // Inicializar entidades de prueba
+        // Test entities
         client1 = ClientEntity.builder().id(1L).name("Cliente Juan").build();
         client2 = ClientEntity.builder().id(2L).name("Cliente Maria").build();
         toolA = ToolEntity.builder().id(10L).name("Martillo").build();
@@ -48,7 +48,7 @@ public class ReportServiceTest {
     }
 
     // =======================================================================
-    // ÉPICA 6: RF 6.1 - PRÉSTAMOS POR ESTADO (getLoansByStatus)
+    // EPIC 6: RF 6.1 - LOANS BY STATUS (getLoansByStatus)
     // =======================================================================
 
     @Test
@@ -67,19 +67,19 @@ public class ReportServiceTest {
     
     @Test
     void getLoansByStatus_ThrowsExceptionForInvalidStatus() {
-        // ACT & ASSERT: Debe fallar al intentar convertir un string inválido a LoanStatus
+        // ACT & ASSERT: an unknown status cannot be converted to LoanStatus
         assertThrows(IllegalArgumentException.class, () -> {
             reportService.getLoansByStatus("INVALID_STATUS", null, null);
-        }, "Debe lanzar excepción si el estado no existe en el Enum.");
+        }, "Must throw when the status does not exist in the enum.");
     }
 
     // =======================================================================
-    // ÉPICA 6: RF 6.2 - CLIENTES CON PRÉSTAMOS ATRASADOS (getClientsWithLateLoans)
+    // EPIC 6: RF 6.2 - CLIENTS WITH LATE LOANS (getClientsWithLateLoans)
     // =======================================================================
 
     @Test
     void getClientsWithLateLoans_ReturnsUniqueClients() {
-        // ARRANGE: Cliente 1 tiene dos préstamos LATE, Cliente 2 tiene uno
+        // ARRANGE: client 1 has two LATE loans, client 2 has one
         LoanEntity lateLoanForC1 = LoanEntity.builder().client(client1).status(LoanStatus.LATE).build();
         LoanEntity anotherLateLoanForC1 = LoanEntity.builder().client(client1).status(LoanStatus.LATE).build();
         LoanEntity lateLoanForC2 = LoanEntity.builder().client(client2).status(LoanStatus.LATE).build();
@@ -89,25 +89,25 @@ public class ReportServiceTest {
         // ACT
         List<ClientEntity> result = reportService.getClientsWithLateLoans(null, null);
 
-        // ASSERT: Debe devolver 2 clientes únicos (se usa .distinct())
+        // ASSERT: 2 distinct clients (.distinct())
         assertEquals(2, result.size());
-        assertTrue(result.stream().anyMatch(c -> c.getId().equals(1L)), "Debe contener al Cliente 1");
-        assertTrue(result.stream().anyMatch(c -> c.getId().equals(2L)), "Debe contener al Cliente 2");
+        assertTrue(result.stream().anyMatch(c -> c.getId().equals(1L)), "Must contain client 1");
+        assertTrue(result.stream().anyMatch(c -> c.getId().equals(2L)), "Must contain client 2");
     }
     
     // =======================================================================
-    // ÉPICA 6: RF 6.3 - RANKING DE HERRAMIENTAS (getTopTools)
+    // EPIC 6: RF 6.3 - TOOL RANKING (getTopTools)
     // =======================================================================
 
     @Test
     void getTopTools_ReturnsRankingFromRepository() {
-        // ARRANGE: Simular el resultado de la consulta SQL (Object[]: ToolEntity, Count)
+        // ARRANGE: result of the query (Object[]: ToolEntity, count)
         LocalDate start = LocalDate.of(2025, 1, 1);
         LocalDate end = LocalDate.of(2025, 1, 31);
         
         List<Object[]> mockRanking = List.of(
-            new Object[]{toolA, 5L}, // 5 veces prestada
-            new Object[]{toolB, 3L}  // 3 veces prestada
+            new Object[]{toolA, 5L}, // loaned 5 times
+            new Object[]{toolB, 3L} // loaned 3 times
         );
 
         when(loanRepository.findTopToolsByDateRange(start, end)).thenReturn(mockRanking);
@@ -117,14 +117,14 @@ public class ReportServiceTest {
 
         // ASSERT
         assertEquals(2, result.size());
-        // Verificar el orden y los datos
+        // order and data
         assertEquals(toolA, result.get(0)[0]);
         assertEquals(5L, result.get(0)[1]);
         verify(loanRepository, times(1)).findTopToolsByDateRange(start, end);
     }
     
     // =======================================================================
-    // MÉTODO: getLoansByStatus (con filtro de fecha)
+    // METHOD: getLoansByStatus (with date filter)
     // =======================================================================
 
     @Test
@@ -141,7 +141,7 @@ public class ReportServiceTest {
         // ASSERT
         assertEquals(1, result.size());
         verify(loanRepository, times(1)).findByStatusAndStartDateBetween(LoanStatus.ACTIVE, from, to);
-        verify(loanRepository, never()).findByStatus(any()); // Verifica que NO se llamó al método sin filtro
+        verify(loanRepository, never()).findByStatus(any()); // the unfiltered query is NOT used
     }
 
     @Test
@@ -158,7 +158,7 @@ public class ReportServiceTest {
     }
 
     // =======================================================================
-    // MÉTODO: getClientsWithLateLoans (con filtro de fecha)
+    // METHOD: getClientsWithLateLoans (with date filter)
     // =======================================================================
 
      @Test
@@ -167,7 +167,7 @@ public class ReportServiceTest {
         LocalDate from = LocalDate.of(2025, 2, 1);
         LocalDate to = LocalDate.of(2025, 2, 28);
         when(loanRepository.findDistinctClientsByStatusAndStartDateBetween(LoanStatus.LATE, from, to))
-                .thenReturn(List.of(client1)); // Simular que solo client1 cumple
+                .thenReturn(List.of(client1)); // only client1 matches
 
         // ACT
         List<ClientEntity> result = reportService.getClientsWithLateLoans(from, to);
@@ -176,7 +176,7 @@ public class ReportServiceTest {
         assertEquals(1, result.size());
         assertEquals(client1.getId(), result.get(0).getId());
         verify(loanRepository, times(1)).findDistinctClientsByStatusAndStartDateBetween(LoanStatus.LATE, from, to);
-        verify(loanRepository, never()).findByStatus(LoanStatus.LATE); // Verifica que no se usó el método sin filtro
+        verify(loanRepository, never()).findByStatus(LoanStatus.LATE); // the unfiltered query is NOT used
     }
 
      @Test
@@ -193,7 +193,7 @@ public class ReportServiceTest {
     }
 
     // =======================================================================
-    // MÉTODO: getTopTools (validaciones de fecha)
+    // METHOD: getTopTools (date validations)
     // =======================================================================
 
     @Test

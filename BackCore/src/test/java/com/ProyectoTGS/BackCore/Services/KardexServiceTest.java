@@ -28,7 +28,7 @@ public class KardexServiceTest {
     @Mock
     private KardexRepository kardexRepository;
 
-    @Mock // Añadir Mock para ToolRepository
+    @Mock
     private ToolRepository toolRepository;
 
     @InjectMocks
@@ -41,67 +41,67 @@ public class KardexServiceTest {
     @BeforeEach
     void setUp() {
         testTool = ToolEntity.builder().id(1L).name("Test Tool").build();
-        toolWithoutId = ToolEntity.builder().name("Tool No ID").build(); // Para probar validaciones
+        toolWithoutId = ToolEntity.builder().name("Tool No ID").build(); // to test validations
         testUser = UserEntity.builder().id(10L).username("test_user").build();
     }
 
     // =======================================================================
-    // MÉTODO: registerMovement
+    // METHOD: registerMovement
     // =======================================================================
 
     @Test
     void registerMovement_Success() {
-        // ARRANGE: Simular que la herramienta existe
+        // ARRANGE: the tool exists
         when(toolRepository.existsById(testTool.getId())).thenReturn(true);
 
         // ACT
         kardexService.registerMovement(testTool, MovementType.INCOME, 5, testUser);
 
-        // ASSERT: Verifica que el repositorio fue llamado con la entidad Kardex correcta
+        // ASSERT: the repository received the expected Kardex entity
         verify(kardexRepository, times(1)).save(
             argThat(kardex ->
                 kardex.getTool().equals(testTool) &&
                 kardex.getType().equals(MovementType.INCOME) &&
                 kardex.getQuantity().equals(5) &&
                 kardex.getUser().equals(testUser) &&
-                kardex.getMovementDate() != null // Verificar que se asigna fecha
+                kardex.getMovementDate() != null // a date is assigned
             )
         );
     }
 
     @Test
     void registerMovement_FailsWhenToolIsNull() {
-        // ACT & ASSERT: Debe fallar si la herramienta es nula
+        // ACT & ASSERT: fails when the tool is null
         assertThrows(ResourceNotFoundException.class, () -> {
             kardexService.registerMovement(null, MovementType.INCOME, 1, testUser);
-        }, "Debe lanzar ResourceNotFoundException si Tool es null.");
-        verify(kardexRepository, never()).save(any()); // No debe intentar guardar
+        }, "Must throw ResourceNotFoundException when the tool is null.");
+        verify(kardexRepository, never()).save(any()); // must not save
     }
 
      @Test
     void registerMovement_FailsWhenToolIdIsNull() {
-        // ACT & ASSERT: Debe fallar si el ID de la herramienta es nulo
+        // ACT & ASSERT: fails when the tool ID is null
         assertThrows(ResourceNotFoundException.class, () -> {
             kardexService.registerMovement(toolWithoutId, MovementType.INCOME, 1, testUser);
-        }, "Debe lanzar ResourceNotFoundException si Tool ID es null.");
-        verify(kardexRepository, never()).save(any()); // No debe intentar guardar
+        }, "Must throw ResourceNotFoundException when the tool ID is null.");
+        verify(kardexRepository, never()).save(any()); // must not save
     }
 
 
     @Test
     void registerMovement_FailsWhenToolDoesNotExistInRepo() {
-        // ARRANGE: Simular que la herramienta NO existe en la BD
+        // ARRANGE: the tool does NOT exist in the database
         when(toolRepository.existsById(testTool.getId())).thenReturn(false);
 
         // ACT & ASSERT
         assertThrows(ResourceNotFoundException.class, () -> {
             kardexService.registerMovement(testTool, MovementType.INCOME, 1, testUser);
-        }, "Debe lanzar ResourceNotFoundException si la herramienta no existe.");
-        verify(kardexRepository, never()).save(any()); // No debe intentar guardar
+        }, "Must throw ResourceNotFoundException when the tool does not exist.");
+        verify(kardexRepository, never()).save(any()); // must not save
     }
 
     // =======================================================================
-    // MÉTODO: getMovementsByToolId
+    // METHOD: getMovementsByToolId
     // =======================================================================
 
     @Test
@@ -109,7 +109,7 @@ public class KardexServiceTest {
         // ARRANGE
         Long toolId = 1L;
         KardexEntity movement1 = KardexEntity.builder().id(1L).tool(testTool).type(MovementType.LOAN).build();
-        when(toolRepository.existsById(toolId)).thenReturn(true); // La herramienta existe
+        when(toolRepository.existsById(toolId)).thenReturn(true); // the tool exists
         when(kardexRepository.findByTool_Id(toolId)).thenReturn(List.of(movement1));
 
         // ACT
@@ -125,8 +125,8 @@ public class KardexServiceTest {
     void getMovementsByToolId_ReturnsEmptyListWhenNoMovements() {
         // ARRANGE
         Long toolId = 1L;
-        when(toolRepository.existsById(toolId)).thenReturn(true); // La herramienta existe
-        when(kardexRepository.findByTool_Id(toolId)).thenReturn(Collections.emptyList()); // No hay movimientos
+        when(toolRepository.existsById(toolId)).thenReturn(true); // the tool exists
+        when(kardexRepository.findByTool_Id(toolId)).thenReturn(Collections.emptyList()); // no movements
 
         // ACT
         List<KardexEntity> result = kardexService.getMovementsByToolId(toolId);
@@ -142,7 +142,7 @@ public class KardexServiceTest {
         // ACT & ASSERT
         assertThrows(IllegalArgumentException.class, () -> {
             kardexService.getMovementsByToolId(null);
-        }, "Debe lanzar IllegalArgumentException si Tool ID es null.");
+        }, "Must throw IllegalArgumentException when the tool ID is null.");
         verify(toolRepository, never()).existsById(any());
         verify(kardexRepository, never()).findByTool_Id(any());
     }
@@ -151,19 +151,19 @@ public class KardexServiceTest {
     void getMovementsByToolId_FailsWhenToolDoesNotExist() {
         // ARRANGE
         Long toolId = 99L;
-        when(toolRepository.existsById(toolId)).thenReturn(false); // La herramienta NO existe
+        when(toolRepository.existsById(toolId)).thenReturn(false); // the tool does NOT exist
 
         // ACT & ASSERT
         assertThrows(ResourceNotFoundException.class, () -> {
             kardexService.getMovementsByToolId(toolId);
-        }, "Debe lanzar ResourceNotFoundException si la herramienta no existe.");
-        verify(toolRepository, times(1)).existsById(toolId); // Verifica que se chequeó la existencia
-        verify(kardexRepository, never()).findByTool_Id(any()); // No debe intentar buscar movimientos
+        }, "Must throw ResourceNotFoundException when the tool does not exist.");
+        verify(toolRepository, times(1)).existsById(toolId); // existence was checked
+        verify(kardexRepository, never()).findByTool_Id(any()); // movements must not be queried
     }
 
 
     // =======================================================================
-    // MÉTODO: getMovementsByDate
+    // METHOD: getMovementsByDate
     // =======================================================================
 
     @Test
@@ -203,7 +203,7 @@ public class KardexServiceTest {
         // ACT & ASSERT
         assertThrows(IllegalArgumentException.class, () -> {
             kardexService.getMovementsByDate(null, LocalDateTime.now());
-        }, "Debe lanzar IllegalArgumentException si startDate es null.");
+        }, "Must throw IllegalArgumentException when startDate is null.");
         verify(kardexRepository, never()).findByMovementDateBetween(any(), any());
     }
 
@@ -212,7 +212,7 @@ public class KardexServiceTest {
         // ACT & ASSERT
         assertThrows(IllegalArgumentException.class, () -> {
             kardexService.getMovementsByDate(LocalDateTime.now(), null);
-        }, "Debe lanzar IllegalArgumentException si endDate es null.");
+        }, "Must throw IllegalArgumentException when endDate is null.");
         verify(kardexRepository, never()).findByMovementDateBetween(any(), any());
     }
 
@@ -220,12 +220,12 @@ public class KardexServiceTest {
     void getMovementsByDate_FailsWhenEndDateIsBeforeStartDate() {
         // ARRANGE
         LocalDateTime start = LocalDateTime.now();
-        LocalDateTime end = start.minusDays(1); // Fecha fin anterior a fecha inicio
+        LocalDateTime end = start.minusDays(1); // end date before the start date
 
         // ACT & ASSERT
         assertThrows(IllegalArgumentException.class, () -> {
             kardexService.getMovementsByDate(start, end);
-        }, "Debe lanzar IllegalArgumentException si endDate es anterior a startDate.");
+        }, "Must throw IllegalArgumentException when endDate is before startDate.");
         verify(kardexRepository, never()).findByMovementDateBetween(any(), any());
     }
 }

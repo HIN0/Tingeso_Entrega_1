@@ -41,14 +41,14 @@ public class ToolServiceTest {
         @InjectMocks
         private ToolService toolService;
 
-        // --- Entidades de Prueba (Setup) ---
+        // --- Test entities (setup) ---
         private UserEntity testUser;
         private ToolEntity toolInput;
         private ToolEntity toolSaved;
 
         @BeforeEach
         void setUp() {
-                // Inicializar un usuario genérico para las pruebas
+                // Generic user for the tests
                 testUser = UserEntity.builder()
                         .id(1L)
                         .username("test_user")
@@ -56,128 +56,128 @@ public class ToolServiceTest {
         }
 
         // =======================================================================
-        // MÉTODO: createTool
-        // Épica 1: Registrar nuevas herramientas
+        // METHOD: createTool
+        // Epic 1: register new tools
         // =======================================================================
 
         /**
-         * Prueba el "camino feliz" de crear una herramienta con stock positivo.
-         * Verifica que:
-         * 1. Se asignen los valores por defecto (status AVAILABLE, inRepair 0).
-         * 2. Se llame al repositorio para guardar.
-         * 3. Se registre el movimiento de INGRESO (INCOME) en el Kardex.
+         * Happy path: create a tool with positive stock.
+         * Checks that:
+         * 1. Default values are assigned (status AVAILABLE, inRepair 0).
+         * 2. The repository saves it.
+         * 3. An INCOME movement is registered in the Kardex.
          */
         @Test
         void createTool_Success_WhenStockIsPositive_RegistersKardex() {
-                // ARRANGE (Preparar)
-                // 1. Definir la herramienta de ENTRADA (la que envía el controlador)
+                // ARRANGE
+                // 1. INPUT tool (as sent by the controller)
                 toolInput = ToolEntity.builder()
                         .name("Taladro Nuevo")
                         .category("Electric Tools")
-                        .stock(5) // Stock positivo
+                        .stock(5) // positive stock
                         .replacementValue(50000)
-                        .inRepair(null) // Simular que viene nulo
-                        .status(null)   // Simular que viene nulo
+                        .inRepair(null) // arrives as null
+                        .status(null) // arrives as null
                         .build();
 
-                // 2. Definir la herramienta de SALIDA (la que devuelve el repositorio tras guardar)
+                // 2. OUTPUT tool (returned by the repository after saving)
                 toolSaved = ToolEntity.builder()
-                        .id(1L) // El ID se genera al guardar
+                        .id(1L) // ID generated on save
                         .name("Taladro Nuevo")
                         .category("Electric Tools")
                         .stock(5)
                         .replacementValue(50000)
-                        .inRepair(0) // El servicio debe poner 0
-                        .status(ToolStatus.AVAILABLE) // El servicio debe poner AVAILABLE
+                        .inRepair(0) // the service sets 0
+                        .status(ToolStatus.AVAILABLE) // the service sets AVAILABLE
                         .build();
 
-                // 3. Mockear el comportamiento del repositorio:
-                // "Cuando se llame a toolRepository.save() con CUALQUIER ToolEntity..."
+                // 3. Repository mocks:
+                // save() with ANY ToolEntity...
                 when(toolRepository.save(any(ToolEntity.class))).thenReturn(toolSaved);
-                // "Cuando se llame a kardexService.registerMovement(), no hagas nada (void)"
-                // (Usamos doNothing() para métodos void)
+                // registerMovement() does nothing (void)
+                // (doNothing() for void methods)
                 doNothing().when(kardexService).registerMovement(any(ToolEntity.class), any(MovementType.class), anyInt(), any(UserEntity.class));
 
-                // ACT (Actuar)
-                // Llamar al método que queremos probar
+                // ACT
+                // Call the method under test
                 ToolEntity result = toolService.createTool(toolInput, testUser);
 
-                // ASSERT (Verificar)
-                // 1. Verificar el objeto devuelto
+                // ASSERT
+                // 1. Returned object
                 assertNotNull(result);
-                assertEquals(1L, result.getId()); // Verifica que es el objeto "guardado"
-                assertEquals(ToolStatus.AVAILABLE, result.getStatus()); // Verifica estado asignado
-                assertEquals(0, result.getInRepair()); // Verifica inRepair asignado
+                assertEquals(1L, result.getId()); // it is the "saved" object
+                assertEquals(ToolStatus.AVAILABLE, result.getStatus()); // status assigned
+                assertEquals(0, result.getInRepair()); // inRepair assigned
 
-                // 2. Verificar que toolRepository.save() fue llamado 1 vez
-                // Usamos argThat para espiar qué objeto se le pasó a save()
+                // 2. toolRepository.save() was called once
+                // argThat inspects the object passed to save()
                 verify(toolRepository, times(1)).save(argThat(toolToSave ->
                         toolToSave.getName().equals("Taladro Nuevo") &&
-                        toolToSave.getStatus().equals(ToolStatus.AVAILABLE) && // Estado asignado antes de guardar
-                        toolToSave.getInRepair().equals(0) // inRepair asignado antes de guardar
+                        toolToSave.getStatus().equals(ToolStatus.AVAILABLE) && // status assigned before saving
+                        toolToSave.getInRepair().equals(0) // inRepair assigned before saving
                 ));
 
-                // 3. Verificar que kardexService.registerMovement() fue llamado 1 vez con los datos correctos
+                // 3. kardexService.registerMovement() was called once with the expected data
                 verify(kardexService, times(1)).registerMovement(
-                        eq(toolSaved),                 // La herramienta guardada (con ID)
-                        eq(MovementType.INCOME),       // El tipo de movimiento
-                        eq(5),                   // La cantidad de stock
-                        eq(testUser)                   // El usuario
+                        eq(toolSaved), // the saved tool (with ID)
+                        eq(MovementType.INCOME), // movement type
+                        eq(5), // stock quantity
+                        eq(testUser) // user
                 );
         }
 
         /**
-         * Prueba el "camino feliz" de crear una herramienta con stock CERO.
-         * Verifica que:
-         * 1. Se asignen los valores por defecto (status AVAILABLE).
-         * 2. Se llame al repositorio para guardar.
-         * 3. NO se registre ningún movimiento en el Kardex (porque el stock es 0).
+         * Happy path: create a tool with ZERO stock.
+         * Checks that:
+         * 1. Default values are assigned (status AVAILABLE).
+         * 2. The repository saves it.
+         * 3. NO Kardex movement is registered (stock is 0).
          */
         @Test
         void createTool_Success_WhenStockIsZero_DoesNotRegisterKardex() {
-                // ARRANGE (Preparar)
-                // 1. Herramienta de ENTRADA con stock 0
+                // ARRANGE
+                // 1. INPUT tool with stock 0
                 toolInput = ToolEntity.builder()
                         .name("Nivel Burbuja")
                         .category("Hand Tools")
-                        .stock(0) // Stock CERO
+                        .stock(0) // ZERO stock
                         .replacementValue(15000)
                         .inRepair(null)
                         .status(null)
                         .build();
 
-                // 2. Herramienta de SALIDA esperada
+                // 2. Expected OUTPUT tool
                 toolSaved = ToolEntity.builder()
-                        .id(2L) // ID diferente para evitar confusiones
+                        .id(2L) // different ID to avoid confusion
                         .name("Nivel Burbuja")
                         .category("Hand Tools")
                         .stock(0)
                         .replacementValue(15000)
                         .inRepair(0)
-                        .status(ToolStatus.AVAILABLE) // Aún debe ser AVAILABLE
+                        .status(ToolStatus.AVAILABLE) // still AVAILABLE
                         .build();
 
-                // 3. Mockear el guardado
+                // 3. Mock the save
                 when(toolRepository.save(any(ToolEntity.class))).thenReturn(toolSaved);
-                // (No necesitamos mockear KardexService, ya que no esperamos que se llame)
+                // (KardexService is not mocked: it must not be called)
 
-                // ACT (Actuar)
+                // ACT
                 ToolEntity result = toolService.createTool(toolInput, testUser);
 
-                // ASSERT (Verificar)
-                // 1. Verificar el objeto devuelto
+                // ASSERT
+                // 1. Returned object
                 assertNotNull(result);
                 assertEquals(2L, result.getId());
                 assertEquals(ToolStatus.AVAILABLE, result.getStatus());
                 assertEquals(0, result.getStock());
 
-                // 2. Verificar que se guardó
+                // 2. It was saved
                 verify(toolRepository, times(1)).save(argThat(toolToSave ->
                         toolToSave.getStock() == 0 &&
                         toolToSave.getStatus().equals(ToolStatus.AVAILABLE)
                 ));
 
-                // 3. VERIFICACIÓN CRÍTICA: Asegurarse de que NUNCA se llamó al Kardex
+                // 3. CRITICAL: the Kardex was NEVER called
                 verify(kardexService, never()).registerMovement(
                         any(ToolEntity.class),
                         any(MovementType.class),
@@ -186,187 +186,187 @@ public class ToolServiceTest {
                 );
         }
         // ========================================================================
-        // MÉTODO: updateTool
-        // Épica 1: Actualizar datos de herramientas
+        // METHOD: updateTool
+        // Epic 1: update tool data
         // =======================================================================
 
         /**
-         * Prueba la actualización exitosa de los detalles de una herramienta.
-         * Verifica que solo se actualicen los campos del DTO (name, category, replacementValue)
-         * y que no se registre nada en el Kardex.
+         * Successful update of the tool details.
+         * Only the DTO fields change (name, category, replacementValue)
+         * and nothing is registered in the Kardex.
          */
                 @Test
         void updateTool_Success() {
-                // ARRANGE (Preparar)
+                // ARRANGE
                 Long toolId = 1L;
-                // 1. Datos de la solicitud de actualización (DTO)
+                // 1. Update request (DTO)
                 UpdateToolRequest updateRequest = new UpdateToolRequest(
-                        "Martillo Actualizado",  // Nuevo nombre
-                        "Herramientas Manuales", // Nueva categoría
-                        25000                    // Nuevo valor
+                        "Martillo Actualizado", // new name
+                        "Herramientas Manuales", // new category
+                        25000 // new value
                 );
 
-                // 2. Herramienta tal como existe en la BD ANTES de la actualización
+                // 2. Tool as stored in the database BEFORE the update
                 ToolEntity existingTool = ToolEntity.builder()
                         .id(toolId)
                         .name("Martillo Viejo")
                         .category("Martillos")
-                        .replacementValue(20000) // Valor > 1000 (pasa la validación)
-                        .stock(10)               // Este campo NO debe cambiar
-                        .status(ToolStatus.AVAILABLE) // Este campo NO debe cambiar
-                        .inRepair(0)             // Este campo NO debe cambiar
+                        .replacementValue(20000) // value > 1000 (passes the validation)
+                        .stock(10) // must NOT change
+                        .status(ToolStatus.AVAILABLE) // must NOT change
+                        .inRepair(0) // must NOT change
                         .build();
                 
-                // 3. Mockear el repositorio:
-                // "Cuando se llame a findById(1L), devuelve la herramienta existente"
+                // 3. Repository mocks:
+                // findById(1L) returns the existing tool
                 when(toolRepository.findById(toolId)).thenReturn(Optional.of(existingTool));
-                // "Cuando se llame a save(), devuelve la entidad que se le pasó"
-                // (Esto nos permite verificar la entidad con los cambios aplicados)
+                // save() returns the entity it receives
+                // (so the applied changes can be checked)
                 when(toolRepository.save(any(ToolEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-                // ACT (Actuar)
+                // ACT
                 ToolEntity updatedTool = toolService.updateTool(toolId, updateRequest, testUser);
 
-                // ASSERT (Verificar)
-                // 1. Verificar los campos actualizados en el objeto devuelto
+                // ASSERT
+                // 1. Updated fields in the returned object
                 assertNotNull(updatedTool);
                 assertEquals("Martillo Actualizado", updatedTool.getName());
                 assertEquals("Herramientas Manuales", updatedTool.getCategory());
                 assertEquals(25000, updatedTool.getReplacementValue());
 
-                // 2. VERIFICACIÓN CRÍTICA: Asegurarse de que los otros campos NO cambiaron
+                // 2. CRITICAL: the other fields did NOT change
                 assertEquals(toolId, updatedTool.getId()); // ID
-                assertEquals(10, updatedTool.getStock()); // Stock
-                assertEquals(ToolStatus.AVAILABLE, updatedTool.getStatus()); // Status
-                assertEquals(0, updatedTool.getInRepair()); // InRepair
+                assertEquals(10, updatedTool.getStock()); // stock
+                assertEquals(ToolStatus.AVAILABLE, updatedTool.getStatus()); // status
+                assertEquals(0, updatedTool.getInRepair()); // inRepair
 
-                // 3. Verificar que se llamó a findById y save (exactamente 1 vez)
+                // 3. findById and save were called exactly once
                 verify(toolRepository, times(1)).findById(toolId);
-                verify(toolRepository, times(1)).save(existingTool); // Debe guardar la misma instancia que actualizó
+                verify(toolRepository, times(1)).save(existingTool); // saves the same updated instance
 
-                // 4. VERIFICACIÓN CRÍTICA: Asegurarse de que NUNCA se llamó al Kardex
+                // 4. CRITICAL: the Kardex was NEVER called
                 verify(kardexService, never()).registerMovement(any(), any(), anyInt(), any());
         }
 
         @Test
         void updateTool_Fails_WhenToolNotFound() {
-                // ARRANGE (Preparar)
-                Long nonExistentToolId = 99L; // Un ID que no existe
-                // El DTO es necesario para la firma del método, aunque no se usará
+                // ARRANGE
+                Long nonExistentToolId = 99L; // an ID that does not exist
+                // The DTO is required by the method signature even if it is not used
                 UpdateToolRequest updateRequest = new UpdateToolRequest(
                         "Nombre Ficticio",
                         "Categoría Ficticia",
                         10000
                 );
 
-                // 3. Mockear el repositorio:
-                // "Cuando se llame a findById(99L), devuelve un Optional vacío (no encontrado)"
+                // 3. Repository mocks:
+                // findById(99L) returns an empty Optional (not found)
                 when(toolRepository.findById(nonExistentToolId)).thenReturn(Optional.empty());
 
-                // ACT & ASSERT (Actuar y Verificar)
-                // Esperamos que el método lance ResourceNotFoundException
+                // ACT & ASSERT
+                // ResourceNotFoundException expected
                 assertThrows(ResourceNotFoundException.class, () -> {
-                        // Esta llamada fallará dentro de getToolById()
+                        // fails inside getToolById()
                         toolService.updateTool(nonExistentToolId, updateRequest, testUser);
-                }, "Debe lanzar ResourceNotFoundException si la herramienta no se encuentra.");
+                }, "Must throw ResourceNotFoundException when the tool is not found.");
 
-                // Verificar que se intentó buscar la herramienta
+                // the tool was looked up
                 verify(toolRepository, times(1)).findById(nonExistentToolId);
-                // VERIFICACIÓN CRÍTICA: Asegurarse de que NUNCA se intentó guardar nada
+                // CRITICAL: nothing was saved
                 verify(toolRepository, never()).save(any(ToolEntity.class));
-                // VERIFICACIÓN CRÍTICA: Asegurarse de que NUNCA se llamó al Kardex
+                // CRITICAL: the Kardex was NEVER called
                 verify(kardexService, never()).registerMovement(any(), any(), anyInt(), any());
         }
 
         /**
-         * Prueba la falla al intentar actualizar una herramienta si su valor de reposición
-         * EXISTENTE es menor a 1000 (según la lógica implementada en el servicio).
+         * The update fails when the EXISTING replacement value
+         * is below 1000 (rule implemented in the service).
          */
         @Test
         void updateTool_Fails_WhenExistingReplacementValueIsLessThan1000() {
-                // ARRANGE (Preparar)
+                // ARRANGE
                 Long toolId = 3L;
-                // La solicitud de actualización es válida (nuevo valor > 1000)
+                // The update request is valid (new value > 1000)
                 UpdateToolRequest updateRequest = new UpdateToolRequest(
                         "Nombre Actualizado",
                         "Categoría Actualizada",
-                        15000 // El nuevo valor SÍ es válido
+                        15000 // the new value IS valid
                 );
 
-                // 2. Herramienta tal como existe en la BD (CON VALOR ANTIGUO < 1000)
+                // 2. Tool as stored in the database (OLD value < 1000)
                 ToolEntity existingToolWithLowValue = ToolEntity.builder()
                         .id(toolId)
                         .name("Herramienta Antigua Barata")
                         .category("Varios")
-                        .replacementValue(900) // <-- VALOR EXISTENTE < 1000
+                        .replacementValue(900) // <-- EXISTING value < 1000
                         .stock(5)
                         .status(ToolStatus.AVAILABLE)
                         .inRepair(0)
                         .build();
 
-                // 3. Mockear el repositorio:
-                // "Cuando se llame a findById(3L), devuelve la herramienta con valor bajo"
+                // 3. Repository mocks:
+                // findById(3L) returns the tool with the low value
                 when(toolRepository.findById(toolId)).thenReturn(Optional.of(existingToolWithLowValue));
 
-                // ACT & ASSERT (Actuar y Verificar)
-                // Esperamos que el método lance InvalidOperationException
+                // ACT & ASSERT
+                // InvalidOperationException expected
                 assertThrows(InvalidOperationException.class, () -> {
-                // Esta llamada fallará en el 'if' de validación del servicio
+                // fails in the validation of the service
                 toolService.updateTool(toolId, updateRequest, testUser);
-                }, "Debe lanzar InvalidOperationException si el valor de reposición existente es < 1000.");
+                }, "Must throw InvalidOperationException when the existing replacement value is < 1000.");
 
-                // Verificar que se intentó buscar la herramienta
+                // the tool was looked up
                 verify(toolRepository, times(1)).findById(toolId);
-                // VERIFICACIÓN CRÍTICA: Asegurarse de que NUNCA se intentó guardar nada
+                // CRITICAL: nothing was saved
                 verify(toolRepository, never()).save(any(ToolEntity.class));
-                // VERIFICACIÓN CRÍTICA: Asegurarse de que NUNCA se llamó al Kardex
+                // CRITICAL: the Kardex was NEVER called
                 verify(kardexService, never()).registerMovement(any(), any(), anyInt(), any());
         }
 
         // =======================================================================
-        // MÉTODO: decommissionTool
-        // Épica 1: Dar de baja herramientas
+        // METHOD: decommissionTool
+        // Epic 1: decommission tools
         // =======================================================================
 
         /**
-         * Prueba la baja exitosa de una herramienta que está disponible y tiene stock.
-         * Verifica que el stock se reduzca a 0, el estado cambie a DECOMMISSIONED
-         * y se registre en Kardex la cantidad de stock original.
+         * Successful decommission of an available tool with stock.
+         * The stock becomes 0, the status DECOMMISSIONED
+         * and the Kardex records the original stock quantity.
          */
         @Test
         void decommissionTool_Success_WhenToolIsAvailableWithStock() {
-                // ARRANGE (Preparar)
+                // ARRANGE
                 Long toolId = 4L;
 
-                // 1. Herramienta existente en estado AVAILABLE y con stock > 0
+                // 1. Existing AVAILABLE tool with stock > 0
                 ToolEntity existingTool = ToolEntity.builder()
                         .id(toolId)
                         .name("Sierra Circular")
                         .category("Electric Tools")
                         .replacementValue(50000)
-                        .stock(5) // <-- Stock positivo
-                        .status(ToolStatus.AVAILABLE) // <-- Estado válido
+                        .stock(5) // <-- positive stock
+                        .status(ToolStatus.AVAILABLE) // <-- valid status
                         .inRepair(0)
                         .build();
 
-                // 2. Mockear el repositorio:
-                // "Cuando se busque por ID=4L, devolver la herramienta"
+                // 2. Repository mocks:
+                // findById(4L) returns the tool
                 when(toolRepository.findById(toolId)).thenReturn(Optional.of(existingTool));
-                // "Cuando se guarde, devolver la entidad que se le pasó"
+                // save returns the entity it receives
                 when(toolRepository.save(any(ToolEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
-                // "Mockear el método void de Kardex"
+                // void Kardex method
                 doNothing().when(kardexService).registerMovement(any(ToolEntity.class), any(MovementType.class), anyInt(), any(UserEntity.class));
 
-                // ACT (Actuar)
+                // ACT
                 ToolEntity decommissionedTool = toolService.decommissionTool(toolId, testUser);
 
-                // ASSERT (Verificar)
-                // 1. Verificar el objeto devuelto
+                // ASSERT
+                // 1. Returned object
                 assertNotNull(decommissionedTool);
-                assertEquals(ToolStatus.DECOMMISSIONED, decommissionedTool.getStatus()); // Estado actualizado
-                assertEquals(0, decommissionedTool.getStock()); // Stock actualizado
+                assertEquals(ToolStatus.DECOMMISSIONED, decommissionedTool.getStatus()); // status updated
+                assertEquals(0, decommissionedTool.getStock()); // stock updated
 
-                // 2. Verificar que se llamó a findById y save
+                // 2. findById and save were called
                 verify(toolRepository, times(1)).findById(toolId);
                 verify(toolRepository, times(1)).save(argThat(savedTool ->
                         savedTool.getId().equals(toolId) &&
@@ -374,191 +374,191 @@ public class ToolServiceTest {
                         savedTool.getStock() == 0
                 ));
 
-                // 3. VERIFICACIÓN CRÍTICA (Kardex):
-                // Debe registrar la cantidad que HABÍA en stock (5)
+                // 3. CRITICAL (Kardex):
+                // records the quantity that WAS in stock (5)
                 verify(kardexService, times(1)).registerMovement(
-                        eq(decommissionedTool),          // La entidad guardada
-                        eq(MovementType.DECOMMISSION),   // El tipo de movimiento
-                        eq(5),                           // La cantidad (el stock original)
-                        eq(testUser)                     // El usuario
+                        eq(decommissionedTool), // the saved entity
+                        eq(MovementType.DECOMMISSION), // movement type
+                        eq(5), // quantity (original stock)
+                        eq(testUser) // user
                 );
         }
 
         /**
-         * Prueba la falla al intentar dar de baja una herramienta que está PRESTADA (LOANED).
-         * Verifica que el servicio lance InvalidOperationException y no se guarde nada.
+         * Decommission fails when units are LOANED.
+         * InvalidOperationException is thrown and nothing is saved.
          */
         @Test
         void decommissionTool_Fails_WhenToolIsLoaned() {
-                // ARRANGE (Preparar)
+                // ARRANGE
                 Long toolId = 5L;
 
-                // 1. Herramienta existente en estado LOANED
+                // 1. Existing LOANED tool
                 ToolEntity loanedTool = ToolEntity.builder()
                         .id(toolId)
                         .name("Taladro Prestado")
-                        .status(ToolStatus.LOANED) // <-- Estado INVÁLIDO para la baja
-                        .stock(0) // Típicamente 0 si está prestada la última unidad
+                        .status(ToolStatus.LOANED) // <-- INVALID status for decommission
+                        .stock(0) // usually 0 when the last unit is loaned
                         .replacementValue(50000)
                         .inRepair(0)
                         .loaned(1) // the rule now checks the loaned-units counter
                         .build();
 
-                // 2. Mockear el repositorio:
-                // "Cuando se busque por ID=5L, devolver la herramienta prestada"
+                // 2. Repository mocks:
+                // findById(5L) returns the loaned tool
                 when(toolRepository.findById(toolId)).thenReturn(Optional.of(loanedTool));
 
-                // ACT & ASSERT (Actuar y Verificar)
-                // Esperamos que el método lance InvalidOperationException
+                // ACT & ASSERT
+                // InvalidOperationException expected
                 assertThrows(InvalidOperationException.class, () -> {
-                // Esta llamada debe fallar en la validación de estado
+                // fails in the loaned-units validation
                 toolService.decommissionTool(toolId, testUser);
-                }, "Debe lanzar InvalidOperationException si la herramienta está en LOANED.");
+                }, "Must throw InvalidOperationException when the tool is LOANED.");
 
-                // Verificar que se intentó buscar la herramienta
+                // the tool was looked up
                 verify(toolRepository, times(1)).findById(toolId);
-                // VERIFICACIÓN CRÍTICA: Asegurarse de que NUNCA se intentó guardar
+                // CRITICAL: nothing was saved
                 verify(toolRepository, never()).save(any(ToolEntity.class));
-                // VERIFICACIÓN CRÍTICA: Asegurarse de que NUNCA se llamó al Kardex
+                // CRITICAL: the Kardex was NEVER called
                 verify(kardexService, never()).registerMovement(any(), any(), anyInt(), any());
         }
 
         /**
-         * Prueba la falla al intentar dar de baja una herramienta que está EN REPARACIÓN (REPAIRING).
-         * Verifica que el servicio lance InvalidOperationException y no se guarde nada.
+         * Decommission fails when units are UNDER REPAIR (REPAIRING).
+         * InvalidOperationException is thrown and nothing is saved.
          */
         @Test
         void decommissionTool_Fails_WhenToolIsRepairing() {
-                // ARRANGE (Preparar)
+                // ARRANGE
                 Long toolId = 6L;
 
-                // 1. Herramienta existente en estado REPAIRING
+                // 1. Existing REPAIRING tool
                 ToolEntity repairingTool = ToolEntity.builder()
                         .id(toolId)
                         .name("Taladro en Reparación")
-                        .status(ToolStatus.REPAIRING) // <-- Estado INVÁLIDO para la baja
+                        .status(ToolStatus.REPAIRING) // <-- INVALID status for decommission
                         .stock(0)
                         .replacementValue(50000)
-                        .inRepair(1) // Tiene 1 unidad en reparación
+                        .inRepair(1) // 1 unit in repair
                         .build();
 
-                // 2. Mockear el repositorio:
-                // "Cuando se busque por ID=6L, devolver la herramienta en reparación"
+                // 2. Repository mocks:
+                // findById(6L) returns the tool under repair
                 when(toolRepository.findById(toolId)).thenReturn(Optional.of(repairingTool));
 
-                // ACT & ASSERT (Actuar y Verificar)
-                // Esperamos que el método lance InvalidOperationException
+                // ACT & ASSERT
+                // InvalidOperationException expected
                 assertThrows(InvalidOperationException.class, () -> {
-                // Esta llamada debe fallar en la validación de estado
+                // fails in the units-in-repair validation
                 toolService.decommissionTool(toolId, testUser);
-                }, "Debe lanzar InvalidOperationException si la herramienta está en REPAIRING.");
+                }, "Must throw InvalidOperationException when the tool is REPAIRING.");
 
-                // Verificar que se intentó buscar la herramienta
+                // the tool was looked up
                 verify(toolRepository, times(1)).findById(toolId);
-                // VERIFICACIÓN CRÍTICA: Asegurarse de que NUNCA se intentó guardar
+                // CRITICAL: nothing was saved
                 verify(toolRepository, never()).save(any(ToolEntity.class));
-                // VERIFICACIÓN CRÍTICA: Asegurarse de que NUNCA se llamó al Kardex
+                // CRITICAL: the Kardex was NEVER called
                 verify(kardexService, never()).registerMovement(any(), any(), anyInt(), any());
         }
 
         /**
-         * Prueba la falla al intentar dar de baja una herramienta que YA ESTÁ en estado DECOMMISSIONED.
-         * Verifica que el servicio lance InvalidOperationException inmediatamente.
+         * Decommission fails when the tool is ALREADY DECOMMISSIONED.
+         * InvalidOperationException is thrown immediately.
          */
         @Test
         void decommissionTool_Fails_WhenToolIsAlreadyDecommissioned() {
-                // ARRANGE (Preparar)
+                // ARRANGE
                 Long toolId = 7L;
 
-                // 1. Herramienta existente que ya está dada de baja
+                // 1. Existing tool already decommissioned
                 ToolEntity alreadyDecommissionedTool = ToolEntity.builder()
                         .id(toolId)
                         .name("Herramienta Rota")
-                        .status(ToolStatus.DECOMMISSIONED) // <-- Estado INVÁLIDO (ya está de baja)
+                        .status(ToolStatus.DECOMMISSIONED) // <-- INVALID status (already decommissioned)
                         .stock(0)
                         .replacementValue(50000)
                         .inRepair(0)
                         .build();
 
-                // 2. Mockear el repositorio:
-                // "Cuando se busque por ID=7L, devolver la herramienta ya dada de baja"
+                // 2. Repository mocks:
+                // findById(7L) returns the decommissioned tool
                 when(toolRepository.findById(toolId)).thenReturn(Optional.of(alreadyDecommissionedTool));
 
-                // ACT & ASSERT (Actuar y Verificar)
-                // Esperamos que el método lance InvalidOperationException
+                // ACT & ASSERT
+                // InvalidOperationException expected
                 assertThrows(InvalidOperationException.class, () -> {
-                // Esta llamada debe fallar en la PRIMERA validación de estado
+                // fails in the FIRST status validation
                 toolService.decommissionTool(toolId, testUser);
-                }, "Debe lanzar InvalidOperationException si la herramienta ya está en DECOMMISSIONED.");
+                }, "Must throw InvalidOperationException when the tool is already DECOMMISSIONED.");
 
-                // Verificar que se intentó buscar la herramienta
+                // the tool was looked up
                 verify(toolRepository, times(1)).findById(toolId);
-                // VERIFICACIÓN CRÍTICA: Asegurarse de que NUNCA se intentó guardar
+                // CRITICAL: nothing was saved
                 verify(toolRepository, never()).save(any(ToolEntity.class));
-                // VERIFICACIÓN CRÍTICA: Asegurarse de que NUNCA se llamó al Kardex
+                // CRITICAL: the Kardex was NEVER called
                 verify(kardexService, never()).registerMovement(any(), any(), anyInt(), any());
         }
 
         // =======================================================================
-        // MÉTODO: incrementStockForReturn
-        // Épica 2: Soporte para devolución de préstamos
+        // METHOD: incrementStockForReturn
+        // Epic 2: support for loan returns
         // =======================================================================
 
         /**
-         * Prueba que al devolver una herramienta (incrementar stock):
-         * 1. El stock aumenta en 1.
-         * 2. El estado cambia de LOANED a AVAILABLE.
-         * 3. Se registra el Kardex como RETURN.
+         * Returning a tool (incrementing stock):
+         * 1. Stock increases by 1.
+         * 2. Status changes from LOANED to AVAILABLE.
+         * 3. A RETURN movement is registered in the Kardex.
          */
         @Test
         void incrementStockForReturn_Success_WhenStatusWasLoaned() {
-                // ARRANGE (Preparar)
+                // ARRANGE
                 Long toolId = 8L;
 
-                // 1. Herramienta que fue prestada (última unidad)
+                // 1. Loaned tool (last unit)
                 ToolEntity loanedTool = ToolEntity.builder()
                         .id(toolId)
                         .name("Herramienta Prestada")
-                        .status(ToolStatus.LOANED) // <-- Estado clave
-                        .stock(0)                  // <-- Stock clave
+                        .status(ToolStatus.LOANED) // <-- key status
+                        .stock(0) // <-- key stock
                         .replacementValue(10000)
                         .inRepair(0)
                         .build();
                 
-                // (No necesitamos mockear findById porque la herramienta se pasa como parámetro)
+                // (findById is not needed: the tool is passed as a parameter)
                 
-                // 2. Mockear el repositorio:
-                // "Cuando se guarde, devolver la entidad que se le pasó"
+                // 2. Repository mocks:
+                // save returns the entity it receives
                 when(toolRepository.save(any(ToolEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
-                // "Mockear el método void de Kardex"
+                // void Kardex method
                 doNothing().when(kardexService).registerMovement(any(ToolEntity.class), any(MovementType.class), anyInt(), any(UserEntity.class));
 
-                // ACT (Actuar)
-                // Llamamos al método directamente
+                // ACT
+                // Call the method directly
                 toolService.incrementStockForReturn(loanedTool, testUser);
 
-                // ASSERT (Verificar)
-                // 1. Verificar los campos de la entidad (que se modificó directamente)
-                assertEquals(1, loanedTool.getStock()); // Stock debe ser 1
-                assertEquals(ToolStatus.AVAILABLE, loanedTool.getStatus()); // Estado debe ser AVAILABLE
+                // ASSERT
+                // 1. Fields of the (directly modified) entity
+                assertEquals(1, loanedTool.getStock()); // stock must be 1
+                assertEquals(ToolStatus.AVAILABLE, loanedTool.getStatus()); // status must be AVAILABLE
 
-                // 2. Verificar que se llamó a save
-                verify(toolRepository, times(1)).save(loanedTool); // Se guarda la entidad modificada
+                // 2. save was called
+                verify(toolRepository, times(1)).save(loanedTool); // the modified entity is saved
 
-                // 3. Verificar que se llamó al Kardex
+                // 3. The Kardex was called
                 verify(kardexService, times(1)).registerMovement(
-                        eq(loanedTool),                // La entidad
-                        eq(MovementType.RETURN),       // El tipo de movimiento
-                        eq(1),                         // La cantidad (siempre 1)
-                        eq(testUser)                   // El usuario
+                        eq(loanedTool), // the entity
+                        eq(MovementType.RETURN), // movement type
+                        eq(1), // quantity (always 1)
+                        eq(testUser) // user
                 );
         }
 
         /**
-         * Prueba que al devolver una herramienta (incrementar stock):
-         * 1. El stock aumenta en 1.
-         * 2. El estado NO cambia si ya era AVAILABLE (porque había más unidades).
-         * 3. Se registra el Kardex como RETURN.
+         * Returning a tool (incrementing stock):
+         * 1. Stock increases by 1.
+         * 2. Status does NOT change if it was already AVAILABLE (more units in stock).
+         * 3. A RETURN movement is registered in the Kardex.
          */
         @Test
         void incrementStockForReturn_Success_WhenStatusWasAvailable() {
@@ -566,8 +566,8 @@ public class ToolServiceTest {
                 ToolEntity availableTool = ToolEntity.builder()
                         .id(9L)
                         .name("Herramienta Común")
-                        .status(ToolStatus.AVAILABLE) // Ya estaba AVAILABLE
-                        .stock(5)                     // Tenía stock
+                        .status(ToolStatus.AVAILABLE) // already AVAILABLE
+                        .stock(5) // had stock
                         .replacementValue(10000)
                         .inRepair(0)
                         .build();
@@ -579,8 +579,8 @@ public class ToolServiceTest {
                 toolService.incrementStockForReturn(availableTool, testUser);
 
                 // ASSERT
-                assertEquals(6, availableTool.getStock()); // Stock aumentó
-                assertEquals(ToolStatus.AVAILABLE, availableTool.getStatus()); // Estado NO cambió
+                assertEquals(6, availableTool.getStock()); // stock increased
+                assertEquals(ToolStatus.AVAILABLE, availableTool.getStatus()); // status did NOT change
                 verify(toolRepository, times(1)).save(availableTool);
                 verify(kardexService, times(1)).registerMovement(
                         eq(availableTool), eq(MovementType.RETURN), eq(1), eq(testUser)
@@ -588,15 +588,15 @@ public class ToolServiceTest {
         }
 
         // =======================================================================
-        // MÉTODO: decrementStockForLoan
-        // Épica 2: Soporte para creación de préstamos
+        // METHOD: decrementStockForLoan
+        // Epic 2: support for loan creation
         // =======================================================================
 
         /**
-         * Prueba que al prestar una herramienta (decrementar stock):
-         * 1. El stock disminuye en 1.
-         * 2. El estado NO cambia si el stock sigue siendo positivo.
-         * 3. Se registra el Kardex como LOAN.
+         * Lending a tool (decrementing stock):
+         * 1. Stock decreases by 1.
+         * 2. Status does NOT change while stock is still positive.
+         * 3. A LOAN movement is registered in the Kardex.
          */
         @Test
         void decrementStockForLoan_Success_WhenStockRemainsPositive() {
@@ -605,7 +605,7 @@ public class ToolServiceTest {
                         .id(10L)
                         .name("Herramienta con Stock")
                         .status(ToolStatus.AVAILABLE)
-                        .stock(5) // <-- Stock positivo > 1
+                        .stock(5) // <-- positive stock > 1
                         .replacementValue(10000)
                         .inRepair(0)
                         .build();
@@ -617,8 +617,8 @@ public class ToolServiceTest {
                 toolService.decrementStockForLoan(toolWithStock, testUser);
 
                 // ASSERT
-                assertEquals(4, toolWithStock.getStock()); // Stock disminuyó
-                assertEquals(ToolStatus.AVAILABLE, toolWithStock.getStatus()); // Estado NO cambió
+                assertEquals(4, toolWithStock.getStock()); // stock decreased
+                assertEquals(ToolStatus.AVAILABLE, toolWithStock.getStatus()); // status did NOT change
                 verify(toolRepository, times(1)).save(toolWithStock);
                 verify(kardexService, times(1)).registerMovement(
                         eq(toolWithStock), eq(MovementType.LOAN), eq(1), eq(testUser)
@@ -626,10 +626,10 @@ public class ToolServiceTest {
         }
 
         /**
-         * Prueba que al prestar la ÚLTIMA unidad de una herramienta:
-         * 1. El stock disminuye a 0.
-         * 2. El estado cambia de AVAILABLE a LOANED.
-         * 3. Se registra el Kardex como LOAN.
+         * Lending the LAST unit of a tool:
+         * 1. Stock decreases to 0.
+         * 2. Status changes from AVAILABLE to LOANED.
+         * 3. A LOAN movement is registered in the Kardex.
          */
         @Test
         void decrementStockForLoan_Success_WhenStockReachesZero() {
@@ -638,7 +638,7 @@ public class ToolServiceTest {
                         .id(11L)
                         .name("Última Unidad")
                         .status(ToolStatus.AVAILABLE)
-                        .stock(1) // <-- Última unidad
+                        .stock(1) // <-- last unit
                         .replacementValue(10000)
                         .inRepair(0)
                         .build();
@@ -650,8 +650,8 @@ public class ToolServiceTest {
                 toolService.decrementStockForLoan(lastUnitTool, testUser);
 
                 // ASSERT
-                assertEquals(0, lastUnitTool.getStock()); // Stock es CERO
-                assertEquals(ToolStatus.LOANED, lastUnitTool.getStatus()); // Estado cambió a LOANED
+                assertEquals(0, lastUnitTool.getStock()); // stock is ZERO
+                assertEquals(ToolStatus.LOANED, lastUnitTool.getStatus()); // status changed to LOANED
                 verify(toolRepository, times(1)).save(lastUnitTool);
                 verify(kardexService, times(1)).registerMovement(
                         eq(lastUnitTool), eq(MovementType.LOAN), eq(1), eq(testUser)
@@ -659,8 +659,8 @@ public class ToolServiceTest {
         }
 
         // =======================================================================
-        // MÉTODO: markAsRepairing
-        // Épica 2: Soporte para devolución con daño leve
+        // METHOD: markAsRepairing
+        // Epic 2: support for returns with light damage
         // =======================================================================
 
         /**
@@ -673,9 +673,9 @@ public class ToolServiceTest {
                         .id(12L)
                         .name("Herramienta a Reparar")
                         .status(ToolStatus.AVAILABLE)
-                        .stock(5) // Stock disponible
+                        .stock(5) // available stock
                         .replacementValue(10000)
-                        .inRepair(0) // Contador inicial
+                        .inRepair(0) // initial counter
                         .loaned(1)   // the unit being returned
                         .build();
 
@@ -683,28 +683,28 @@ public class ToolServiceTest {
                 toolService.markAsRepairing(toolToRepair, testUser);
 
                 // ASSERT
-                assertEquals(1, toolToRepair.getInRepair()); // 'inRepair' aumentó
+                assertEquals(1, toolToRepair.getInRepair()); // inRepair increased
                 assertEquals(0, toolToRepair.getLoaned());   // the unit is no longer with the client
-                assertEquals(5, toolToRepair.getStock());    // 'stock' no cambió
+                assertEquals(5, toolToRepair.getStock()); // stock did not change
                 assertEquals(ToolStatus.AVAILABLE, toolToRepair.getStatus()); // still has stock to lend
 
                 verify(toolRepository, times(1)).save(toolToRepair);
 
-                // Verificar que se llamó al Kardex
+                // The Kardex was called
                 verify(kardexService, times(1)).registerMovement(
                         eq(toolToRepair), eq(MovementType.REPAIR), eq(1), eq(testUser)
                 );
         }
 
         /**
-         * Prueba que NO se puede marcar para reparación una herramienta ya dada de baja.
+         * A decommissioned tool cannot be sent to repair.
          */
         @Test
         void markAsRepairing_Fails_WhenToolIsDecommissioned() {
                 // ARRANGE
                 ToolEntity decommissionedTool = ToolEntity.builder()
                         .id(13L)
-                        .status(ToolStatus.DECOMMISSIONED) // <-- Estado inválido
+                        .status(ToolStatus.DECOMMISSIONED) // <-- invalid status
                         .stock(0)
                         .inRepair(0)
                         .build();
@@ -712,16 +712,16 @@ public class ToolServiceTest {
                 // ACT & ASSERT
                 assertThrows(InvalidOperationException.class, () -> {
                 toolService.markAsRepairing(decommissionedTool, testUser);
-                }, "Debe lanzar InvalidOperationException si la herramienta está DECOMMISSIONED.");
+                }, "Must throw InvalidOperationException when the tool is DECOMMISSIONED.");
 
-                // Verificar que no se llamó al Kardex
+                // the Kardex was not called
                 verify(kardexService, never()).registerMovement(any(), any(), anyInt(), any());
                 verify(toolRepository, never()).save(any());
         }
 
         // =======================================================================
-        // MÉTODO: markAsDecommissioned
-        // Épica 2: Soporte para devolución con daño irreparable
+        // METHOD: markAsDecommissioned
+        // Epic 2: support for returns with irreparable damage
         // =======================================================================
 
         /**
@@ -750,41 +750,41 @@ public class ToolServiceTest {
                 assertEquals(ToolStatus.REPAIRING, toolToDecommission.getStatus()); // only the unit in repair remains
                 verify(toolRepository, times(1)).save(toolToDecommission);
 
-                // Verificar que se llamó al Kardex
+                // The Kardex was called
                 verify(kardexService, times(1)).registerMovement(
                         eq(toolToDecommission), eq(MovementType.DECOMMISSION), eq(1), eq(testUser)
                 );
         }
 
         /**
-         * Prueba que NO se puede marcar (registrar baja en Kardex) si ya está DECOMMISSIONED.
+         * Cannot register a decommission in the Kardex if the tool is already DECOMMISSIONED.
          */
         @Test
         void markAsDecommissioned_Fails_WhenToolIsAlreadyDecommissioned() {
                 // ARRANGE
                 ToolEntity decommissionedTool = ToolEntity.builder()
                         .id(15L)
-                        .status(ToolStatus.DECOMMISSIONED) // <-- Estado inválido
+                        .status(ToolStatus.DECOMMISSIONED) // <-- invalid status
                         .build();
 
                 // ACT & ASSERT
                 assertThrows(InvalidOperationException.class, () -> {
                 toolService.markAsDecommissioned(decommissionedTool, testUser);
-                }, "Debe lanzar InvalidOperationException si la herramienta ya está DECOMMISSIONED.");
+                }, "Must throw InvalidOperationException when the tool is already DECOMMISSIONED.");
 
-                // Verificar que no se llamó al Kardex
+                // the Kardex was not called
                 verify(kardexService, never()).registerMovement(any(), any(), anyInt(), any());
                 verify(toolRepository, never()).save(any());
         }
 
         // =======================================================================
-        // MÉTODO: adjustStock (Ajuste Manual)
+        // METHOD: adjustStock (manual adjustment)
         // =======================================================================
 
         /**
-         * Prueba un AUMENTO de stock manual exitoso.
-         * Verifica que el stock aumente, el estado (si era LOANED) cambie a AVAILABLE,
-         * y se registre el Kardex como INCOME.
+         * Successful manual stock INCREASE.
+         * The stock increases, the status (if it was LOANED) becomes AVAILABLE,
+         * and an INCOME movement is registered in the Kardex.
          */
         @Test
         void adjustStock_Success_WhenIncreasingStock() {
@@ -792,8 +792,8 @@ public class ToolServiceTest {
                 Long toolId = 16L;
                 ToolEntity tool = ToolEntity.builder()
                         .id(toolId)
-                        .status(ToolStatus.LOANED) // Empezamos en LOANED
-                        .stock(0)                  // Con stock 0
+                        .status(ToolStatus.LOANED) // starts as LOANED
+                        .stock(0) // with stock 0
                         .replacementValue(10000)
                         .inRepair(0)
                         .build();
@@ -802,15 +802,15 @@ public class ToolServiceTest {
                 when(toolRepository.save(any(ToolEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
                 doNothing().when(kardexService).registerMovement(any(), any(), anyInt(), any());
 
-                // ACT: Aumentar stock en 5
+                // ACT: increase stock by 5
                 ToolEntity updatedTool = toolService.adjustStock(toolId, 5, testUser);
 
                 // ASSERT
-                assertEquals(5, updatedTool.getStock()); // Stock aumentó
-                assertEquals(ToolStatus.AVAILABLE, updatedTool.getStatus()); // Estado cambió a AVAILABLE
+                assertEquals(5, updatedTool.getStock()); // stock increased
+                assertEquals(ToolStatus.AVAILABLE, updatedTool.getStatus()); // status changed to AVAILABLE
                 verify(toolRepository, times(1)).save(tool);
                 verify(kardexService, times(1)).registerMovement(
-                        eq(tool), eq(MovementType.INCOME), eq(5), eq(testUser) // Cantidad 5
+                        eq(tool), eq(MovementType.INCOME), eq(5), eq(testUser) // quantity 5
                 );
         }
 
@@ -826,7 +826,7 @@ public class ToolServiceTest {
                 ToolEntity tool = ToolEntity.builder()
                         .id(toolId)
                         .status(ToolStatus.AVAILABLE)
-                        .stock(3) // Stock inicial 3
+                        .stock(3) // initial stock 3
                         .replacementValue(10000)
                         .inRepair(0)
                         .build();
@@ -835,15 +835,15 @@ public class ToolServiceTest {
                 when(toolRepository.save(any(ToolEntity.class))).thenAnswer(invocation -> invocation.getArgument(0));
                 doNothing().when(kardexService).registerMovement(any(), any(), anyInt(), any());
 
-                // ACT: Disminuir stock en 3
+                // ACT: decrease stock by 3
                 ToolEntity updatedTool = toolService.adjustStock(toolId, -3, testUser);
 
                 // ASSERT
-                assertEquals(0, updatedTool.getStock()); // Stock es CERO
+                assertEquals(0, updatedTool.getStock()); // stock is ZERO
                 assertEquals(ToolStatus.AVAILABLE, updatedTool.getStatus()); // nobody has it: not LOANED
                 verify(toolRepository, times(1)).save(tool);
                 verify(kardexService, times(1)).registerMovement(
-                        eq(tool), eq(MovementType.MANUAL_DECREASE), eq(3), eq(testUser) // Cantidad 3 (Math.abs)
+                        eq(tool), eq(MovementType.MANUAL_DECREASE), eq(3), eq(testUser) // quantity 3 (absolute value)
                 );
         }
 
@@ -857,7 +857,7 @@ public class ToolServiceTest {
                 Long toolId = 18L;
                 ToolEntity tool = ToolEntity.builder()
                         .id(toolId)
-                        .status(ToolStatus.REPAIRING) // <-- Estado clave
+                        .status(ToolStatus.REPAIRING) // <-- key status
                         .stock(0)
                         .replacementValue(10000)
                         .inRepair(1)
@@ -871,7 +871,7 @@ public class ToolServiceTest {
                 ToolEntity updatedTool = toolService.adjustStock(toolId, 2, testUser);
 
                 // ASSERT
-                assertEquals(2, updatedTool.getStock()); // Stock aumentó
+                assertEquals(2, updatedTool.getStock()); // stock increased
                 assertEquals(1, updatedTool.getInRepair()); // the damaged unit is still in repair
                 assertEquals(ToolStatus.AVAILABLE, updatedTool.getStatus()); // it can be lent again
                 verify(toolRepository, times(1)).save(tool);
@@ -883,13 +883,13 @@ public class ToolServiceTest {
         @Test
         void adjustStock_Fails_WhenQuantityIsZero() {
                 // ARRANGE
-                Long toolId = 16L; // ID no importa
+                Long toolId = 16L; // the ID does not matter
                 
                 // ACT & ASSERT
                 assertThrows(InvalidOperationException.class, () -> {
                 // quantityChange = 0
                 toolService.adjustStock(toolId, 0, testUser);
-                }, "Debe lanzar InvalidOperationException si quantityChange es 0.");
+                }, "Must throw InvalidOperationException when quantityChange is 0.");
                 
                 verify(toolRepository, never()).findById(anyLong());
                 verify(kardexService, never()).registerMovement(any(), any(), anyInt(), any());
@@ -904,7 +904,7 @@ public class ToolServiceTest {
                 // ACT & ASSERT
                 assertThrows(ResourceNotFoundException.class, () -> {
                 toolService.adjustStock(nonExistentToolId, 5, testUser);
-                }, "Debe lanzar ResourceNotFoundException si la herramienta no se encuentra.");
+                }, "Must throw ResourceNotFoundException when the tool is not found.");
                 
                 verify(toolRepository, times(1)).findById(nonExistentToolId);
                 verify(toolRepository, never()).save(any());
@@ -917,7 +917,7 @@ public class ToolServiceTest {
                 Long toolId = 19L;
                 ToolEntity tool = ToolEntity.builder()
                         .id(toolId)
-                        .status(ToolStatus.DECOMMISSIONED) // <-- Estado inválido
+                        .status(ToolStatus.DECOMMISSIONED) // <-- invalid status
                         .stock(0)
                         .build();
                 
@@ -926,7 +926,7 @@ public class ToolServiceTest {
                 // ACT & ASSERT
                 assertThrows(InvalidOperationException.class, () -> {
                 toolService.adjustStock(toolId, 5, testUser);
-                }, "Debe lanzar InvalidOperationException si la herramienta está DECOMMISSIONED.");
+                }, "Must throw InvalidOperationException when the tool is DECOMMISSIONED.");
                 
                 verify(toolRepository, times(1)).findById(toolId);
                 verify(toolRepository, never()).save(any());
@@ -940,7 +940,7 @@ public class ToolServiceTest {
                 ToolEntity tool = ToolEntity.builder()
                         .id(toolId)
                         .status(ToolStatus.AVAILABLE)
-                        .stock(3) // Stock inicial 3
+                        .stock(3) // initial stock 3
                         .replacementValue(10000)
                         .inRepair(0)
                         .build();
@@ -949,9 +949,9 @@ public class ToolServiceTest {
 
                 // ACT & ASSERT
                 assertThrows(InvalidOperationException.class, () -> {
-                // Intentar restar 4 (3 - 4 = -1)
+                // Try to remove 4 (3 - 4 = -1)
                 toolService.adjustStock(toolId, -4, testUser);
-                }, "Debe lanzar InvalidOperationException si el stock resultante es negativo.");
+                }, "Must throw InvalidOperationException when the resulting stock is negative.");
 
                 verify(toolRepository, times(1)).findById(toolId);
                 verify(toolRepository, never()).save(any());
@@ -959,7 +959,7 @@ public class ToolServiceTest {
         }
 
         // =======================================================================
-        // MÉTODO: getAllTools (Consulta)
+        // METHOD: getAllTools (query)
         // =======================================================================
 
         @Test
@@ -996,7 +996,7 @@ public class ToolServiceTest {
         }
 
         // =======================================================================
-        // MÉTODO: getToolById (Consulta)
+        // METHOD: getToolById (query)
         // =======================================================================
 
         @Test
@@ -1025,7 +1025,7 @@ public class ToolServiceTest {
                 // ACT & ASSERT
                 assertThrows(ResourceNotFoundException.class, () -> {
                 toolService.getToolById(nonExistentToolId);
-                }, "Debe lanzar ResourceNotFoundException si la herramienta no se encuentra.");
+                }, "Must throw ResourceNotFoundException when the tool is not found.");
 
                 verify(toolRepository, times(1)).findById(nonExistentToolId);
         }
