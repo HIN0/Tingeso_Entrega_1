@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import ReportService from "../services/report.service";
 import { useKeycloak } from "@react-keycloak/web";
+import { getErrorMessage } from "../utils/apiError";
 
 function ReportViewer() {
   const [reportType, setReportType] = useState("LATE_CLIENTS"); // Tipo de reporte activo
@@ -72,7 +73,7 @@ function ReportViewer() {
       })
       .catch(e => {
           console.error("Error loading report:", e);
-          setMessage(`Error loading report: ${e.response?.data?.message || e.message || 'Unknown error'}`);
+          setMessage(`Error loading report: ${getErrorMessage(e)}`);
       })
       .finally(() => setLoading(false));
   };
@@ -80,6 +81,8 @@ function ReportViewer() {
   // Cargar reporte inicial (sin filtro de fecha)
   useEffect(() => {
     loadReport(reportType, false); // Carga inicial sin filtro
+    // Intentional: run only on first render / role change, not on every reportType change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAdminOrUser]); // Solo se ejecuta si cambia el estado de autenticación/rol
 
   // Manejador para cambiar de reporte y ejecutarlo

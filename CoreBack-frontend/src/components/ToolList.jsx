@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useKeycloak } from "@react-keycloak/web";
 import ToolService from "../services/tool.service";
 import { Link } from "react-router-dom";
+import { getErrorMessage } from "../utils/apiError";
 
 // --- FUNCIÓN DE CLASIFICACIÓN AVANZADA ---
 const sortTools = (a, b) => {
@@ -78,7 +79,7 @@ function ToolList() {
         .then(loadTools)
         .catch(e => {
             console.error("Error decommissioning tool:", e);
-            const errorMsg = e.response?.data?.message || e.response?.data || "Failed to decommission tool.";
+            const errorMsg = getErrorMessage(e, "Failed to decommission tool.");
             setError(`Error decommissioning tool ${id}: ${errorMsg}`);
         });
     }
@@ -98,7 +99,7 @@ function ToolList() {
     request
       .then(loadTools)
       .catch(e => {
-          const errorMsg = e.response?.data?.message || "Failed to update the repair.";
+          const errorMsg = getErrorMessage(e, "Failed to update the repair.");
           setError(`Error updating repair for tool ${tool.id}: ${errorMsg}`);
       });
   };
@@ -134,7 +135,7 @@ function ToolList() {
           })
           .catch(e => {
               console.error(`Error ${actionText}ing stock:`, e);
-              const errorMsg = e.response?.data?.message || e.response?.data || `Failed to ${actionText} stock.`;
+              const errorMsg = getErrorMessage(e, `Failed to ${actionText} stock.`);
               setError(`Error adjusting stock for tool ${adjustment.id}: ${errorMsg}`);
           });
   };

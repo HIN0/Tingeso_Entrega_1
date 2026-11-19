@@ -3,9 +3,10 @@ import ClientService from "../services/client.service";
 import LoanService from "../services/loan.service";
 import { useKeycloak } from "@react-keycloak/web";
 import { Link } from "react-router-dom";
+import { getErrorMessage } from "../utils/apiError";
 
 // Componente simple para mostrar los detalles de las deudas debajo de la fila del cliente
-function DebtDetails({ clientId, onPay, messageSetter }) {
+function DebtDetails({ clientId, messageSetter }) {
   const [debts, setDebts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
@@ -22,7 +23,7 @@ function DebtDetails({ clientId, onPay, messageSetter }) {
       })
       .catch(e => {
         console.error("Error fetching unpaid loans:", e);
-        setErrorMessage(`Error al cargar deudas: ${e.response?.data?.message || e.message}`);
+        setErrorMessage(`Error al cargar deudas: ${getErrorMessage(e)}`);
       })
       .finally(() => setLoading(false));
   }, [clientId]); // Recargar si cambia el ID del cliente (aunque en este uso no cambiará mientras esté visible)
@@ -40,12 +41,12 @@ function DebtDetails({ clientId, onPay, messageSetter }) {
         setLoading(true);
         LoanService.getUnpaidLoansByClient(clientId)
           .then(response => setDebts(response.data))
-          .catch(e => setErrorMessage(`Error al recargar deudas: ${e.response?.data?.message || e.message}`))
+          .catch(e => setErrorMessage(`Error al recargar deudas: ${getErrorMessage(e)}`))
           .finally(() => setLoading(false));
       })
       .catch(e => {
         console.error("Error marking loan as paid:", e);
-        setErrorMessage(`Error al marcar pago: ${e.response?.data?.message || e.message}`);
+        setErrorMessage(`Error al marcar pago: ${getErrorMessage(e)}`);
         messageSetter(""); // Limpiar mensaje de progreso si hay error
       });
   };
@@ -138,7 +139,7 @@ function ClientList() {
           .then(loadClients)
           .catch(e => {
             console.error(`Error updating client status to RESTRICTED:`, e);
-            setMessage(`Error al restringir: ${e.response?.data?.message || e.message}`);
+            setMessage(`Error al restringir: ${getErrorMessage(e)}`);
           });
       }
     } else { // currentStatus === "RESTRICTED"
@@ -151,7 +152,7 @@ function ClientList() {
           })
           .catch(e => {
             console.error(`Error attempting reactivation for client ${id}:`, e);
-            setMessage(`Error al intentar activar ${clientName}: ${e.response?.data?.message || e.message}`);
+            setMessage(`Error al intentar activar ${clientName}: ${getErrorMessage(e)}`);
           });
       }
     }
@@ -231,8 +232,7 @@ function ClientList() {
               {visibleDebtsClientId === client.id && (
                 <tr className="debt-details-row">
                   {/* Pasamos el clientId y el setMessage para que el subcomponente pueda actualizar mensajes */}
-                  <DebtDetails clientId={client.id} onPay={() => {}} messageSetter={setMessage} />
-                  {/* La función onPay aquí es un placeholder, ya que la lógica de pago está dentro de DebtDetails */}
+                  <DebtDetails clientId={client.id} messageSetter={setMessage} />
                 </tr>
               )}
             </React.Fragment>

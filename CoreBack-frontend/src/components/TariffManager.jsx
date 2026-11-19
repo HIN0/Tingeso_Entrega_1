@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import TariffService from "../services/tariff.service";
 import { useKeycloak } from "@react-keycloak/web";
+import { getErrorMessage } from "../utils/apiError";
 
 function TariffManager() {
   const [tariffs, setTariffs] = useState({
@@ -51,7 +52,7 @@ function TariffManager() {
       })
       .catch((e) => {
         console.error("Error updating tariffs:", e);
-        setMessage(`Error al actualizar: ${e.response?.data || e.message}`);
+        setMessage(`Error al actualizar: ${getErrorMessage(e)}`);
       });
   };
 

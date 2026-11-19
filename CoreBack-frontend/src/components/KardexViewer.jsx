@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import KardexService from "../services/kardex.service";
+import { getErrorMessage } from "../utils/apiError";
 
 function KardexViewer() {
   const [queryType, setQueryType] = useState("tool"); // 'tool' o 'date'
@@ -30,7 +31,7 @@ function KardexViewer() {
       })
       .catch(error => {
         console.error("Error fetching kardex:", error);
-        setMessage(`Error: ${error.message || "Could not fetch kardex data."}`);
+        setMessage(`Error: ${getErrorMessage(error, "Could not fetch kardex data.")}`);
       })
       .finally(() => {
         setLoading(false);
@@ -43,7 +44,7 @@ function KardexViewer() {
       try {
           const date = new Date(dateTimeString);
           return date.toLocaleString(); // Formato local (ej. 21/10/2025, 10:30:00)
-      } catch (e) {
+      } catch {
           return dateTimeString; // Devolver original si hay error
       }
   };

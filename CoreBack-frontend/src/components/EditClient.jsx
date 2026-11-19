@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import ClientService from "../services/client.service";
 import { useNavigate, useParams } from "react-router-dom";
+import { getErrorMessage } from "../utils/apiError";
 
 function EditClient() {
   const { id } = useParams(); // Obtener ID de la URL
@@ -52,7 +53,7 @@ function EditClient() {
       })
       .catch((error) => {
         console.error("Error updating client:", error);
-        setMessage(`Error al actualizar cliente: ${error.response?.data?.message || error.response?.data || error.message}`);
+        setMessage(`Error al actualizar cliente: ${getErrorMessage(error)}`);
       });
   };
 

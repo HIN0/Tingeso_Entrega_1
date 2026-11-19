@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import ToolService from "../services/tool.service";
 import { useNavigate, useParams } from "react-router-dom";
+import { getErrorMessage } from "../utils/apiError";
 
 function EditTool() {
   const { id } = useParams();
@@ -51,7 +52,7 @@ function EditTool() {
       })
       .catch((err) => {
         console.error("Error updating tool:", err);
-        const errorMsg = err.response?.data?.message || err.response?.data || "Failed to update tool.";
+        const errorMsg = getErrorMessage(err, "Failed to update tool.");
         setError(errorMsg);
       });
   };

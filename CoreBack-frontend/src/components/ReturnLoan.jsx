@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import LoanService from "../services/loan.service";
+import { getErrorMessage } from "../utils/apiError";
 
 function ReturnLoan() {
   const { id } = useParams();
@@ -80,7 +81,7 @@ function ReturnLoan() {
       })
       .catch((e) => {
         console.error("Error returning loan:", e.response ? e.response.data : e);
-        setError(`Error en la devolución: ${e.response?.data?.message || 'Error de conexión/servidor.'}`);
+        setError(`Error en la devolución: ${getErrorMessage(e)}`);
       });
   };
 

@@ -1,37 +1,21 @@
 import { useState } from "react";
 import ToolService from "../services/tool.service";
 import { useNavigate } from "react-router-dom";
-
-// --- FUNCIÓN AUXILIAR PARA DAR FORMATO A LOS ERRORES DE VALIDACIÓN ---
-const formatValidationErrors = (errors) => {
-    if (!errors || typeof errors !== 'object') {
-        return "Validation failed with an unknown error.";
-    }
-    let errorString = "Validation Errors:\n";
-    for (const field in errors) {
-        // Formatea el nombre del campo para que sea más legible (ej: "replacementValue" -> "Replacement Value")
-        const formattedField = field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
-        errorString += `• ${formattedField}: ${errors[field]}\n`;
-    }
-    return errorString.trim();
-};
-// ----------------------------------------------------------------------
-
+import { getErrorMessage } from "../utils/apiError";
 
 function AddTool() {
+  // Units loaned / in repair and the status are decided by the backend, not sent from here
   const [tool, setTool] = useState({
     name: "",
     category: "",
     replacementValue: 0,
     stock: 0,
-    inRepair: 0 // <--- 1. Inicializar el nuevo campo a 0
   });
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
   const handleChange = (e) => {
-    // 2. Asegurarse que los campos numéricos (incluyendo inRepair si lo añades como input) se parseen
-    const value = (e.target.name === 'stock' || e.target.name === 'replacementValue' || e.target.name === 'inRepair')
+    const value = (e.target.name === 'stock' || e.target.name === 'replacementValue')
                   ? parseInt(e.target.value) || 0
                   : e.target.value;
     setTool({ ...tool, [e.target.name]: value });
@@ -41,9 +25,8 @@ function AddTool() {
     e.preventDefault();
     setError("");
 
-    // Puedes añadir validaciones si es necesario para inRepair aquí
-    if (tool.stock < 0 || tool.replacementValue < 0 || tool.inRepair < 0) {
-        setError("Stock, Replacement Value (and In Repair) cannot be negative.");
+    if (tool.stock < 0 || tool.replacementValue < 0) {
+        setError("Stock and Replacement Value cannot be negative.");
         return;
     }
      if (tool.replacementValue < 1000) { // Validacion Min(1000) del backend
@@ -52,29 +35,13 @@ function AddTool() {
     }
 
 
-    // 3. El objeto 'tool' ya incluye 'inRepair' por el estado inicializado
     ToolService.create(tool)
       .then(() => {
         navigate("/tools");
       })
       .catch((err) => {
         console.error("Error creating tool:", err);
-        
-        const backendErrors = err.response?.data?.fieldErrors;
-        let errorMsg;
-        
-        if (backendErrors) {
-            // --- LÓGICA CORREGIDA: Usar la función para formatear errores ---
-            errorMsg = formatValidationErrors(backendErrors);
-        } else {
-            // Lógica para otros tipos de errores (Bad Request, Internal Server, etc.)
-            errorMsg = err.response?.data?.message || 
-                       err.response?.data?.error || 
-                       err.response?.data || 
-                       "Failed to create tool. Please check the data.";
-        }
-        
-        setError(errorMsg);
+        setError(getErrorMessage(err, "Failed to create tool. Please check the data."));
       });
   };
 
@@ -134,22 +101,6 @@ function AddTool() {
             min="1000" // Mantener la validación del backend
           />
         </div>
-
-        {/* 4. PUEDE SER QUIZA: Añadir un input para 'inRepair' si el usuario debe definirlo.
-           Si siempre es 0 al crear, no necesitas un input, solo inicializarlo en el estado. */}
-        {/*
-        <div>
-          <label>Initial In Repair: </label>
-          <input
-            type="number"
-            name="inRepair"
-            value={tool.inRepair}
-            onChange={handleChange}
-            required
-            min="0"
-          />
-        </div>
-        */}
 
         <button type="submit" style={{ marginTop: '15px' }}>Save</button>
       </form>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import ClientService from "../services/client.service";
 import { useNavigate } from "react-router-dom";
+import { getErrorMessage } from "../utils/apiError";
 
 function AddClient() {
   const [client, setClient] = useState({
@@ -26,7 +27,7 @@ function AddClient() {
       })
       .catch((error) => {
         console.error("Error creating client:", error);
-        setMessage(`Error al crear cliente: ${error.response?.data || error.message}`);
+        setMessage(`Error al crear cliente: ${getErrorMessage(error)}`);
       });
   };
 
