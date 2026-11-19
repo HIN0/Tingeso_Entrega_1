@@ -73,6 +73,12 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Simulated JWT users for the web layer tests (MockMvc + jwt()) -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
+            <scope>test</scope>
+        </dependency>
         <!-- AssertJ  -->
         <dependency>
             <groupId>org.assertj</groupId>
