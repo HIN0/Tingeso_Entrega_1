@@ -1,12 +1,34 @@
-# React + Vite
+# ToolRent — Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19 single-page application built with Vite. See the [main README](../README.md) for the full project.
 
-Currently, two official plugins are available:
+## Scripts
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+| Command           | Description                                             |
+|-------------------|---------------------------------------------------------|
+| `npm install`     | Install dependencies                                    |
+| `npm run dev`     | Dev server on http://localhost:5173 (proxies `/api` to http://localhost:8080) |
+| `npm run build`   | Production build into `dist/`                           |
+| `npm run lint`    | ESLint                                                  |
 
-## Expanding the ESLint configuration
+## Configuration (build time)
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+| Variable                  | Default                 |
+|---------------------------|-------------------------|
+| `VITE_API_URL`            | `/api`                  |
+| `VITE_KEYCLOAK_URL`       | `http://localhost:8090` |
+| `VITE_KEYCLOAK_REALM`     | `toolrent-realm`        |
+| `VITE_KEYCLOAK_CLIENT_ID` | `toolrent-frontend`     |
+
+Vite inlines these values when building, so they must be set before `npm run build` (not at container runtime).
+
+## Structure
+
+```
+src/
+├── components/   pages and forms (tools, loans, clients, tariffs, reports, kardex)
+├── services/     one HTTP client per backend resource + Keycloak instance
+├── utils/        apiError.js: turns backend errors into readable messages
+├── http-common.js  axios instance; attaches and refreshes the Keycloak token
+└── App.jsx       routes and role-based menu
+```
