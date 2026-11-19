@@ -14,6 +14,7 @@ import java.util.List;
 @Repository
 public interface LoanRepository extends JpaRepository<LoanEntity, Long> {
        List<LoanEntity> findByStatus(LoanStatus status);
+       List<LoanEntity> findByStatusIn(List<LoanStatus> statuses);
        List<LoanEntity> findByClientAndStatus(ClientEntity client, LoanStatus status);
        List<LoanEntity> findByClientAndStatusAndTotalPenaltyGreaterThan(ClientEntity client, LoanStatus status, double penaltyThreshold);
        long countByClientAndStatus(ClientEntity client, LoanStatus status);

@@ -147,17 +147,12 @@ public class ToolService {
 
     // --- MÉTODO PARA AJUSTE MANUAL DE STOCK ---
     @Transactional
-    public ToolEntity adjustStock(Long id, int quantityChange, MovementType movementType, UserEntity user) {
+    public ToolEntity adjustStock(Long id, int quantityChange, UserEntity user) {
         if (quantityChange == 0) {
             throw new InvalidOperationException("Quantity change cannot be zero.");
         }
-
-        if (quantityChange > 0 && movementType != MovementType.INCOME) {
-            throw new InvalidOperationException("Positive stock adjustment requires INCOME movement type.");
-        }
-        if (quantityChange < 0 && movementType != MovementType.MANUAL_DECREASE) {
-            throw new InvalidOperationException("Negative stock adjustment requires MANUAL_DECREASE movement type.");
-        }
+        // Business rule: the sign of the change defines the Kardex movement type
+        MovementType movementType = quantityChange > 0 ? MovementType.INCOME : MovementType.MANUAL_DECREASE;
 
         ToolEntity tool = getToolById(id);
         if (tool.getStatus() == ToolStatus.DECOMMISSIONED) {

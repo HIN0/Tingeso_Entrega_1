@@ -1,10 +1,9 @@
 package controllers;
 
 import entities.KardexEntity;
-import services.KardexService;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.http.ResponseEntity;
-import app.exceptions.ResourceNotFoundException;
+import services.KardexService;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -20,20 +19,17 @@ public class KardexController {
         this.kardexService = kardexService;
     }
 
+    // RF5.2: movement history of a tool (404 handled by GlobalExceptionHandler)
     @GetMapping("/tool/{toolId}")
-    public ResponseEntity<List<KardexEntity>> getMovementsByToolId(@PathVariable Long toolId) {
-        try {
-            List<KardexEntity> movements = kardexService.getMovementsByToolId(toolId);
-            return ResponseEntity.ok(movements);
-        } catch (ResourceNotFoundException e) {
-            return ResponseEntity.notFound().build();
-        }
+    public List<KardexEntity> getMovementsByToolId(@PathVariable Long toolId) {
+        return kardexService.getMovementsByToolId(toolId);
     }
 
+    // RF5.3: movements in a date range, ISO format: 2025-01-31T00:00:00
     @GetMapping("/date")
-    public List<KardexEntity> getMovementsByDate(@RequestParam String start,@RequestParam String end) {
-        LocalDateTime startTime = LocalDateTime.parse(start);
-        LocalDateTime endTime = LocalDateTime.parse(end);
-        return kardexService.getMovementsByDate(startTime, endTime);
+    public List<KardexEntity> getMovementsByDate(
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime start,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime end) {
+        return kardexService.getMovementsByDate(start, end);
     }
 }

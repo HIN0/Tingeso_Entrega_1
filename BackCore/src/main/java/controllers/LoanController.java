@@ -30,12 +30,9 @@ public class LoanController {
 
     @GetMapping
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
-    public List<LoanEntity> getAllLoans() {
-        List<LoanEntity> active = loanService.getActiveLoans();
-        List<LoanEntity> late = loanService.getLateLoans();
-        active.addAll(late);
-        return active;
-        }
+    public List<LoanEntity> getOpenLoans() {
+        return loanService.getOpenLoans();
+    }
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")

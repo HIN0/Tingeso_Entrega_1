@@ -1081,6 +1081,17 @@ public class LoanServiceTest {
     }
 
     @Test
+    void getOpenLoans_QueriesActiveAndLateLoansInOneCall() {
+        LoanEntity active = LoanEntity.builder().id(1L).status(LoanStatus.ACTIVE).build();
+        LoanEntity late = LoanEntity.builder().id(2L).status(LoanStatus.LATE).build();
+        when(loanRepository.findByStatusIn(List.of(LoanStatus.ACTIVE, LoanStatus.LATE))).thenReturn(List.of(active, late));
+
+        List<LoanEntity> result = loanService.getOpenLoans();
+
+        assertEquals(List.of(active, late), result);
+    }
+
+    @Test
     void markOverdueLoansAsLate_ReturnsZeroWhenNothingIsOverdue() {
         when(loanRepository.findByStatusAndDueDateBefore(eq(LoanStatus.ACTIVE), any(LocalDate.class)))
                 .thenReturn(Collections.emptyList());

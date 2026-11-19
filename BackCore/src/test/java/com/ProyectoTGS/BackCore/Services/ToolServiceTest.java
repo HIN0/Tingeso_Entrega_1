@@ -812,7 +812,7 @@ public class ToolServiceTest {
                 doNothing().when(kardexService).registerMovement(any(), any(), anyInt(), any());
 
                 // ACT: Aumentar stock en 5
-                ToolEntity updatedTool = toolService.adjustStock(toolId, 5, MovementType.INCOME, testUser);
+                ToolEntity updatedTool = toolService.adjustStock(toolId, 5, testUser);
 
                 // ASSERT
                 assertEquals(5, updatedTool.getStock()); // Stock aumentó
@@ -845,7 +845,7 @@ public class ToolServiceTest {
                 doNothing().when(kardexService).registerMovement(any(), any(), anyInt(), any());
 
                 // ACT: Disminuir stock en 3
-                ToolEntity updatedTool = toolService.adjustStock(toolId, -3, MovementType.MANUAL_DECREASE, testUser);
+                ToolEntity updatedTool = toolService.adjustStock(toolId, -3, testUser);
 
                 // ASSERT
                 assertEquals(0, updatedTool.getStock()); // Stock es CERO
@@ -876,7 +876,7 @@ public class ToolServiceTest {
                 doNothing().when(kardexService).registerMovement(any(), any(), anyInt(), any());
 
                 // ACT: Aumentar stock en 2 (ej. llegaron repuestos)
-                ToolEntity updatedTool = toolService.adjustStock(toolId, 2, MovementType.INCOME, testUser);
+                ToolEntity updatedTool = toolService.adjustStock(toolId, 2, testUser);
 
                 // ASSERT
                 assertEquals(2, updatedTool.getStock()); // Stock aumentó
@@ -895,39 +895,11 @@ public class ToolServiceTest {
                 // ACT & ASSERT
                 assertThrows(InvalidOperationException.class, () -> {
                 // quantityChange = 0
-                toolService.adjustStock(toolId, 0, MovementType.INCOME, testUser);
+                toolService.adjustStock(toolId, 0, testUser);
                 }, "Debe lanzar InvalidOperationException si quantityChange es 0.");
                 
                 verify(toolRepository, never()).findById(anyLong());
                 verify(kardexService, never()).registerMovement(any(), any(), anyInt(), any());
-        }
-
-        @Test
-        void adjustStock_Fails_WhenMismatchIncreaseMovementType() {
-                // ARRANGE
-                Long toolId = 16L;
-                
-                // ACT & ASSERT
-                assertThrows(InvalidOperationException.class, () -> {
-                // quantityChange > 0, pero tipo incorrecto
-                toolService.adjustStock(toolId, 5, MovementType.MANUAL_DECREASE, testUser);
-                }, "Debe lanzar InvalidOperationException si el tipo de movimiento no coincide (aumento).");
-                
-                verify(toolRepository, never()).findById(anyLong());
-        }
-
-        @Test
-        void adjustStock_Fails_WhenMismatchDecreaseMovementType() {
-                // ARRANGE
-                Long toolId = 16L;
-                
-                // ACT & ASSERT
-                assertThrows(InvalidOperationException.class, () -> {
-                // quantityChange < 0, pero tipo incorrecto
-                toolService.adjustStock(toolId, -5, MovementType.INCOME, testUser);
-                }, "Debe lanzar InvalidOperationException si el tipo de movimiento no coincide (disminución).");
-                
-                verify(toolRepository, never()).findById(anyLong());
         }
 
         @Test
@@ -938,7 +910,7 @@ public class ToolServiceTest {
 
                 // ACT & ASSERT
                 assertThrows(ResourceNotFoundException.class, () -> {
-                toolService.adjustStock(nonExistentToolId, 5, MovementType.INCOME, testUser);
+                toolService.adjustStock(nonExistentToolId, 5, testUser);
                 }, "Debe lanzar ResourceNotFoundException si la herramienta no se encuentra.");
                 
                 verify(toolRepository, times(1)).findById(nonExistentToolId);
@@ -960,7 +932,7 @@ public class ToolServiceTest {
 
                 // ACT & ASSERT
                 assertThrows(InvalidOperationException.class, () -> {
-                toolService.adjustStock(toolId, 5, MovementType.INCOME, testUser);
+                toolService.adjustStock(toolId, 5, testUser);
                 }, "Debe lanzar InvalidOperationException si la herramienta está DECOMMISSIONED.");
                 
                 verify(toolRepository, times(1)).findById(toolId);
@@ -985,7 +957,7 @@ public class ToolServiceTest {
                 // ACT & ASSERT
                 assertThrows(InvalidOperationException.class, () -> {
                 // Intentar restar 4 (3 - 4 = -1)
-                toolService.adjustStock(toolId, -4, MovementType.MANUAL_DECREASE, testUser);
+                toolService.adjustStock(toolId, -4, testUser);
                 }, "Debe lanzar InvalidOperationException si el stock resultante es negativo.");
 
                 verify(toolRepository, times(1)).findById(toolId);

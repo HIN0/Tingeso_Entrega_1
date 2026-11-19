@@ -264,14 +264,10 @@ public class LoanService {
                 .orElseThrow(() -> new ResourceNotFoundException("Loan not found with id: " + loanId));
     }
 
+    // Open loans = tool still in the client's hands (ACTIVE or LATE)
     @Transactional(readOnly = true)
-    public List<LoanEntity> getActiveLoans() {
-        return loanRepository.findByStatus(LoanStatus.ACTIVE);
-    }
-
-    @Transactional(readOnly = true)
-    public List<LoanEntity> getLateLoans() {
-        return loanRepository.findByStatus(LoanStatus.LATE);
+    public List<LoanEntity> getOpenLoans() {
+        return loanRepository.findByStatusIn(List.of(LoanStatus.ACTIVE, LoanStatus.LATE));
     }
 
     // RF2.5 / RF3.2: ACTIVE loans past their due date become LATE and their clients are restricted.
