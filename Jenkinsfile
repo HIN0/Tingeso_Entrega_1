@@ -31,8 +31,10 @@ pipeline {
                 dir('BackCore') {
                     script {
                         docker.withRegistry('', DOCKER_CRED_ID) {
-                            def app = docker.build("${IMAGE_BACK}:latest")
+                            // Versioned tag (traceable, allows rollback) + latest (used by compose.yml)
+                            def app = docker.build("${IMAGE_BACK}:${env.BUILD_NUMBER}")
                             app.push()
+                            app.push('latest')
                         }
                     }
                 }
@@ -44,8 +46,9 @@ pipeline {
                 dir('CoreBack-frontend') {
                     script {
                         docker.withRegistry('', DOCKER_CRED_ID) {
-                            def app = docker.build("${IMAGE_FRONT}:latest")
+                            def app = docker.build("${IMAGE_FRONT}:${env.BUILD_NUMBER}")
                             app.push()
+                            app.push('latest')
                         }
                     }
                 }

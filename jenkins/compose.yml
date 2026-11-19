@@ -1,0 +1,21 @@
+# Local Jenkins for the CI/CD pipeline
+#   docker compose -f jenkins/compose.yml up -d --build
+#   UI: http://localhost:8081   (initial password: see jenkins/README.md)
+services:
+  jenkins:
+    build: .
+    image: toolrent-jenkins
+    container_name: toolrent-jenkins
+    # root is needed to use the host Docker socket from the container (local development only)
+    user: root
+    ports:
+      - "8081:8080"
+    volumes:
+      # Jenkins configuration, jobs and credentials survive container restarts
+      - jenkins_home:/var/jenkins_home
+      # The pipeline builds images with the Docker engine of this computer
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart: unless-stopped
+
+volumes:
+  jenkins_home:
