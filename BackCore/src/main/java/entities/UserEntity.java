@@ -1,5 +1,6 @@
 package entities;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import entities.enums.UserRole;
 import jakarta.persistence.*;
 import lombok.*;
@@ -19,6 +20,8 @@ public class UserEntity {
 
     private String username;
 
+    // Credentials are managed by Keycloak (IAM); never expose this field in API responses
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
     @Enumerated(EnumType.STRING)

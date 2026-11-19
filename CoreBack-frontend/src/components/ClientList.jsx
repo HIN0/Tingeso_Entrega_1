@@ -106,7 +106,7 @@ function ClientList() {
   const { keycloak } = useKeycloak();
   const isAuth = !!keycloak?.authenticated;
   const isAdmin = isAuth && keycloak.hasRealmRole("ADMIN");
-  const isEmployee = isAuth && keycloak.hasRealmRole("USER");
+  const isEmployee = isAuth && keycloak.hasRealmRole("EMPLOYEE");
   const [message, setMessage] = useState("");
 
   // Nuevo estado para controlar qué cliente tiene los detalles de deuda visibles

@@ -1,0 +1,59 @@
+{
+  "realm": "toolrent-realm",
+  "displayName": "ToolRent",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "loginWithEmailAllowed": true,
+  "accessTokenLifespan": 1800,
+  "ssoSessionIdleTimeout": 3600,
+  "roles": {
+    "realm": [
+      { "name": "ADMIN", "description": "Administrator: full access to every option of the system" },
+      { "name": "EMPLOYEE", "description": "Employee: loans, returns and reports" }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "toolrent-frontend",
+      "name": "ToolRent React frontend",
+      "enabled": true,
+      "publicClient": true,
+      "protocol": "openid-connect",
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "rootUrl": "http://localhost",
+      "baseUrl": "/",
+      "redirectUris": ["http://localhost/*", "http://localhost:5173/*"],
+      "webOrigins": ["http://localhost", "http://localhost:5173"],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "http://localhost/*##http://localhost:5173/*"
+      }
+    }
+  ],
+  "users": [
+    {
+      "username": "diego",
+      "enabled": true,
+      "email": "diego@toolrent.cl",
+      "emailVerified": true,
+      "firstName": "Diego",
+      "lastName": "Admin",
+      "credentials": [{ "type": "password", "value": "diego123", "temporary": false }],
+      "realmRoles": ["ADMIN"]
+    },
+    {
+      "username": "juan",
+      "enabled": true,
+      "email": "juan@toolrent.cl",
+      "emailVerified": true,
+      "firstName": "Juan",
+      "lastName": "Employee",
+      "credentials": [{ "type": "password", "value": "juan123", "temporary": false }],
+      "realmRoles": ["EMPLOYEE"]
+    }
+  ]
+}

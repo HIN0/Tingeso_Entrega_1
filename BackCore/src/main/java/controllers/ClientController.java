@@ -26,11 +26,13 @@ public class ClientController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
     public List<ClientEntity> getAllClients() {
         return clientService.getAllClients();
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
     public ClientEntity getClientById(@PathVariable Long id) {
         return clientService.getClientById(id);
     }

@@ -29,28 +29,24 @@ public class SecurityConfig {
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 
-                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() 
-                
-                // Permite a USER y ADMIN leer las herramientas con "GET"
-                .requestMatchers(HttpMethod.GET, "/loans/**").hasAnyRole("ADMIN", "USER") 
-                .requestMatchers(HttpMethod.GET, "/tools/**").hasAnyRole("ADMIN", "USER")
-                                
-                // Regla de Escritura: Explícita para los métodos de modificación del ADMIN
-                .requestMatchers(HttpMethod.POST, "/tools/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PUT, "/tools/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PATCH, "/tools/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.DELETE, "/tools/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                // Health check used by docker compose
+                .requestMatchers("/actuator/health").permitAll()
 
-                // Rutas que requieren solo ADMIN
+                // EMPLOYEE: loans/returns and reports only. It may READ tools and clients
+                // because it needs them to register a loan.
+                .requestMatchers(HttpMethod.GET, "/tools/**").hasAnyRole("ADMIN", "EMPLOYEE")
+                .requestMatchers(HttpMethod.GET, "/clients/**").hasAnyRole("ADMIN", "EMPLOYEE")
+                .requestMatchers("/loans/**").hasAnyRole("ADMIN", "EMPLOYEE")
+                .requestMatchers("/reports/**").hasAnyRole("ADMIN", "EMPLOYEE")
+
+                // ADMIN: full access (inventory, clients, tariffs, kardex, users)
+                .requestMatchers("/tools/**").hasRole("ADMIN")
+                .requestMatchers("/clients/**").hasRole("ADMIN")
                 .requestMatchers("/tariffs/**").hasRole("ADMIN")
-                .requestMatchers("/clients/**").hasRole("ADMIN") 
-                
-                // Rutas que requieren ADMIN o USER (Movimientos Del Kardex, Devoluciones, Préstamos y Reportes)
-                .requestMatchers("/kardex/**").hasAnyRole("ADMIN", "USER")
-                .requestMatchers("/returns/**").hasAnyRole("ADMIN", "USER")
-                .requestMatchers("/loans/**").hasAnyRole("ADMIN", "USER")
-                .requestMatchers("/reports/**").hasAnyRole("ADMIN", "USER")
-                
+                .requestMatchers("/kardex/**").hasRole("ADMIN")
+                .requestMatchers("/users/**").hasRole("ADMIN")
+
                 .anyRequest().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2

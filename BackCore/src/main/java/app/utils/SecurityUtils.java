@@ -1,43 +1,49 @@
 package app.utils;
 
 import entities.UserEntity;
+import entities.enums.UserRole;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.stereotype.Component; // NECESARIO para que Spring la gestione
-import services.UserService; // NECESARIO para buscar el ID de usuario
+import org.springframework.stereotype.Component;
+import services.UserService;
 
-@Component // ¡ESTA ES LA ANOTACIÓN FALTANTE QUE RESUELVE EL ERROR!
+import java.util.Collection;
+import java.util.Map;
+
+@Component
 public class SecurityUtils {
 
     private final UserService userService;
 
-    // Spring usa este constructor para inyectar UserService
     public SecurityUtils(UserService userService) {
         this.userService = userService;
     }
 
-
     /**
-     * Extrae el nombre de usuario del JWT y busca el UserEntity completo en la BD para obtener el ID.
+     * Resolves the authenticated Keycloak user (JWT) to its local UserEntity,
+     * creating it on first access so every operation can be audited.
      */
     public UserEntity getUserFromAuthentication(Authentication authentication) {
         if (authentication == null || authentication.getPrincipal() == null) {
-            throw new IllegalStateException("Usuario no autenticado. El contexto de seguridad es nulo."); 
+            throw new IllegalStateException("User is not authenticated.");
         }
-
         if (!(authentication.getPrincipal() instanceof Jwt jwt)) {
-            throw new IllegalArgumentException("El Principal esperado no es un JWT.");
+            throw new IllegalArgumentException("Expected a JWT principal.");
         }
-        
-        // Keycloak usa 'preferred_username' para el nombre de usuario
+
         String username = jwt.getClaimAsString("preferred_username");
-
         if (username == null) {
-             throw new IllegalStateException("La claim 'preferred_username' no se encontró en el JWT.");
+            throw new IllegalStateException("Claim 'preferred_username' not found in JWT.");
         }
+        return userService.findOrCreate(username, resolveRole(jwt));
+    }
 
-        // Busca el UserEntity por username para obtener el ID de la base de datos (CRÍTICO para Kardex)
-        return userService.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User '" + username + "' not found in database."));
+    private UserRole resolveRole(Jwt jwt) {
+        Map<String, Object> realmAccess = jwt.getClaim("realm_access");
+        if (realmAccess != null && realmAccess.get("roles") instanceof Collection<?> roles
+                && roles.contains("ADMIN")) {
+            return UserRole.ADMIN;
+        }
+        return UserRole.EMPLOYEE;
     }
 }

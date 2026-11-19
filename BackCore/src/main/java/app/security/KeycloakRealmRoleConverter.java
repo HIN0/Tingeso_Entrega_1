@@ -20,7 +20,8 @@ public class KeycloakRealmRoleConverter implements Converter<Jwt, Collection<Gra
         if (roles == null) return Collections.emptySet();
 
         return roles.stream()
-                .map(role -> new SimpleGrantedAuthority("ROLE_" + role))
+                // Realm roles are ADMIN / EMPLOYEE; avoid "ROLE_ROLE_X" if a role already has the prefix
+                .map(role -> new SimpleGrantedAuthority(role.startsWith("ROLE_") ? role : "ROLE_" + role))
                 .collect(Collectors.toSet());
     }
 }

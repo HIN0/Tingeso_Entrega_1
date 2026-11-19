@@ -2,7 +2,9 @@ import axios from "axios";
 import keycloak from "./services/keycloak"; 
 
 const apiClient = axios.create({
-  baseURL: "http://localhost:8080",
+  // Relative path: Nginx load balancer forwards /api/* to the backend replicas
+  // (in "npm run dev" the Vite proxy forwards it to localhost:8080).
+  baseURL: import.meta.env.VITE_API_URL || "/api",
   headers: {
     "Content-type": "application/json",
   },

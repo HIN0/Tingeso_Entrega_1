@@ -29,7 +29,7 @@ public class LoanController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
     public List<LoanEntity> getAllLoans() {
         List<LoanEntity> active = loanService.getActiveLoans();
         List<LoanEntity> late = loanService.getLateLoans();
@@ -38,28 +38,28 @@ public class LoanController {
         }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
     public ResponseEntity<LoanEntity> getLoanById(@PathVariable Long id) {
         LoanEntity loan = loanService.getLoanById(id);
         return ResponseEntity.ok(loan);
     }
 
     @GetMapping("/client/{clientId}/unpaid")
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
     public ResponseEntity<List<LoanEntity>> getUnpaidLoansForClient(@PathVariable Long clientId) {
         List<LoanEntity> unpaidLoans = loanService.getUnpaidReceivedLoansByClientId(clientId);
         return ResponseEntity.ok(unpaidLoans);
     }
 
     @PostMapping(consumes = "application/json", produces = "application/json")
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
     public LoanEntity createLoanJson(@RequestBody @Valid LoanRequest req, Authentication authentication) {
         UserEntity currentUser = securityUtils.getUserFromAuthentication(authentication);
         return loanService.createLoan(req.clientId(), req.toolId(), req.startDate(), req.dueDate(), currentUser);
     }
 
     @PutMapping(path = "/{id}/return", consumes = "application/json", produces = "application/json")
-    @PreAuthorize("hasAnyRole('ADMIN', 'USER')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'EMPLOYEE')")
     public LoanEntity returnLoanJson(@PathVariable Long id, @RequestBody @Valid ReturnLoanRequest req, Authentication authentication) {
         UserEntity currentUser = securityUtils.getUserFromAuthentication(authentication);
         return loanService.returnLoan(

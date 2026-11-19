@@ -14,7 +14,7 @@ function ReportViewer() {
   const [useDateFilter, setUseDateFilter] = useState(false);
 
   const { keycloak } = useKeycloak();
-  const isAdminOrUser = keycloak?.authenticated && (keycloak.hasRealmRole("ADMIN") || keycloak.hasRealmRole("USER"));
+  const isAdminOrUser = keycloak?.authenticated && (keycloak.hasRealmRole("ADMIN") || keycloak.hasRealmRole("EMPLOYEE"));
 
   // Función para cargar reportes, ahora usa las fechas si están activas
   const loadReport = (type, filterDates) => {

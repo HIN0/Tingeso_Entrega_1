@@ -14,8 +14,10 @@ import app.exceptions.InvalidOperationException;
 import app.exceptions.ResourceNotFoundException;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -93,8 +95,17 @@ public class LoanService {
             throw new IllegalArgumentException("Due date cannot be before start date.");
         }
 
+        // 5b. Overdue loans not yet flagged as LATE by the scheduler also block new loans
+        List<LoanEntity> activeLoans = loanRepository.findByClientAndStatus(client, LoanStatus.ACTIVE);
+        LocalDate today = LocalDate.now();
+        boolean hasOverdueLoans = activeLoans.stream()
+                .anyMatch(l -> l.getDueDate() != null && l.getDueDate().isBefore(today));
+        if (hasOverdueLoans) {
+            throw new InvalidOperationException("Client has overdue loan(s) that must be returned.");
+        }
+
         // 6. Límite de 5 Préstamos Activos/Atrasados (Ya incluye LATE, está bien)
-        long activeOrLateCount = loanRepository.findByClientAndStatus(client, LoanStatus.ACTIVE).size() + lateLoanCount;
+        long activeOrLateCount = activeLoans.size() + lateLoanCount;
         if (activeOrLateCount >= 5) {
             throw new InvalidOperationException("Client has reached the maximum number of active/late loans (5).");
         }
@@ -117,6 +128,8 @@ public class LoanService {
                 .dueDate(dueDate)
                 .status(LoanStatus.ACTIVE)
                 .totalPenalty(0.0)
+                .loanedBy(user)
+                .loanedAt(LocalDateTime.now())
                 .build();
 
         toolService.decrementStockForLoan(tool, user);
@@ -206,6 +219,8 @@ public class LoanService {
         }
 
         loan.setReturnDate(returnDate);
+        loan.setReturnedBy(user);
+        loan.setReturnedAt(LocalDateTime.now());
         loan.setStatus(LoanStatus.RECEIVED); // Se recibe la herramienta, pendiente de pago
 
         // --- Guardar Préstamo ---
@@ -270,5 +285,22 @@ public class LoanService {
     @Transactional(readOnly = true)
     public List<LoanEntity> getLateLoans() {
         return loanRepository.findByStatus(LoanStatus.LATE);
+    }
+
+    // RF2.5 / RF3.2: ACTIVE loans past their due date become LATE and their clients are restricted.
+    // Runs at startup and then every hour (idempotent, safe to run on every backend replica).
+    @Scheduled(initialDelay = 10_000, fixedRate = 3_600_000)
+    @Transactional
+    public int markOverdueLoansAsLate() {
+        List<LoanEntity> overdueLoans = loanRepository.findByStatusAndDueDateBefore(LoanStatus.ACTIVE, LocalDate.now());
+        for (LoanEntity loan : overdueLoans) {
+            loan.setStatus(LoanStatus.LATE);
+            loanRepository.save(loan);
+            if (loan.getClient().getStatus() != ClientStatus.RESTRICTED) {
+                clientService.updateStatus(loan.getClient().getId(), ClientStatus.RESTRICTED);
+                loan.getClient().setStatus(ClientStatus.RESTRICTED);
+            }
+        }
+        return overdueLoans.size();
     }
 }

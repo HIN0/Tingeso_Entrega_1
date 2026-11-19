@@ -18,6 +18,8 @@ FROM nginx:alpine
 
 # Copiamos desde 'dist' (Confirmado por tu captura)
 COPY --from=build-stage /app/dist /usr/share/nginx/html
+# SPA fallback (try_files -> index.html)
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 

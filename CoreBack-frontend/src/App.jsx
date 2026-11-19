@@ -31,7 +31,7 @@ function Menu() {
   const { keycloak } = useKeycloak();
   const isAuth = !!keycloak?.authenticated;
   const isAdmin = isAuth && keycloak.hasRealmRole("ADMIN");
-  const isUser = isAuth && keycloak.hasRealmRole("USER");
+  const isUser = isAuth && keycloak.hasRealmRole("EMPLOYEE");
 
   return (
     <nav style={{display:"flex",gap:12,padding:"8px 16px",borderBottom:"1px solid #eee"}}>
@@ -42,7 +42,7 @@ function Menu() {
       {(isAdmin) && <Link to="/tariffs">Tarifas</Link>}
       {(isUser || isAdmin) && <Link to="/loans/add">Registrar préstamo</Link>}
       {(isUser || isAdmin) && <Link to="/reports">Reportes</Link>} 
-      {(isUser || isAdmin) && <Link to="/kardex">Kardex</Link>}
+      {(isAdmin) && <Link to="/kardex">Kardex</Link>}
     </nav>
   );
 }
@@ -65,8 +65,8 @@ export default function App() {
 
         {/* --- Rutas de Préstamos --- */}
         <Route path="/loans" element={<RequireAuth><LoanList /></RequireAuth>} />
-        <Route path="/loans/add" element={<RequireAuth roles={["ADMIN","USER"]}><AddLoan /></RequireAuth>} />
-        <Route path="/loans/return/:id" element={<RequireAuth roles={["ADMIN", "USER"]}><ReturnLoan /></RequireAuth>} />
+        <Route path="/loans/add" element={<RequireAuth roles={["ADMIN","EMPLOYEE"]}><AddLoan /></RequireAuth>} />
+        <Route path="/loans/return/:id" element={<RequireAuth roles={["ADMIN", "EMPLOYEE"]}><ReturnLoan /></RequireAuth>} />
 
         {/* --- Rutas de Clientes --- */}
         <Route path="/clients" element={<RequireAuth roles={["ADMIN"]}><ClientList /></RequireAuth>} />
@@ -75,8 +75,8 @@ export default function App() {
         
         {/* --- Rutas de Tarifas, Reportes y Kardex--- */}
         <Route path="/tariffs" element={<RequireAuth roles={["ADMIN"]}><TariffManager /></RequireAuth>} />
-        <Route path="/reports" element={<RequireAuth roles={["USER","ADMIN"]}><ReportViewer /></RequireAuth>} />
-        <Route path="/kardex" element={<RequireAuth roles={["ADMIN", "USER"]}><KardexViewer /></RequireAuth>} />
+        <Route path="/reports" element={<RequireAuth roles={["EMPLOYEE","ADMIN"]}><ReportViewer /></RequireAuth>} />
+        <Route path="/kardex" element={<RequireAuth roles={["ADMIN"]}><KardexViewer /></RequireAuth>} />
 
         {/* fallback */}
         <Route path="*" element={

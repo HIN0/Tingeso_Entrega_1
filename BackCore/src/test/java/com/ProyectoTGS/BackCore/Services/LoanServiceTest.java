@@ -1001,4 +1001,92 @@ public class LoanServiceTest {
                 any(ClientEntity.class), any(LoanStatus.class), anyDouble());
     }
 
+    // =========================================================================================================
+    // RF2.5 / RF3.2: overdue loans -> LATE, client restricted; audit fields (user + timestamp)
+    // =========================================================================================================
+
+    @Test
+    void createLoan_FailsWhenClientHasOverdueActiveLoan() {
+        LocalDate today = LocalDate.now();
+        ToolEntity otherTool = ToolEntity.builder().id(99L).build();
+        LoanEntity overdue = LoanEntity.builder().id(5L).client(clientActive).tool(otherTool)
+                .startDate(today.minusDays(10)).dueDate(today.minusDays(1)).status(LoanStatus.ACTIVE).build();
+
+        when(clientRepository.findById(1L)).thenReturn(Optional.of(clientActive));
+        when(toolRepository.findById(10L)).thenReturn(Optional.of(toolAvailable));
+        when(loanRepository.findByClientAndStatus(clientActive, LoanStatus.ACTIVE)).thenReturn(List.of(overdue));
+
+        InvalidOperationException ex = assertThrows(InvalidOperationException.class,
+                () -> loanService.createLoan(1L, 10L, today, today.plusDays(3), testUser));
+        assertTrue(ex.getMessage().contains("overdue"));
+        verify(loanRepository, never()).save(any(LoanEntity.class));
+    }
+
+    @Test
+    void createLoan_RecordsResponsibleUserAndTimestamp() {
+        LocalDate today = LocalDate.now();
+        when(clientRepository.findById(1L)).thenReturn(Optional.of(clientActive));
+        when(toolRepository.findById(10L)).thenReturn(Optional.of(toolAvailable));
+        when(loanRepository.save(any(LoanEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        LoanEntity created = loanService.createLoan(1L, 10L, today, today.plusDays(3), testUser);
+
+        assertEquals(testUser, created.getLoanedBy());
+        assertNotNull(created.getLoanedAt());
+    }
+
+    @Test
+    void returnLoan_RecordsResponsibleUserAndTimestamp() {
+        LocalDate today = LocalDate.now();
+        LoanEntity loan = LoanEntity.builder().id(7L).client(clientActive).tool(toolAvailable)
+                .startDate(today.minusDays(2)).dueDate(today.plusDays(2)).status(LoanStatus.ACTIVE).build();
+        when(loanRepository.findById(7L)).thenReturn(Optional.of(loan));
+        when(tariffService.getDailyRentFee()).thenReturn(1000.0);
+        when(loanRepository.save(any(LoanEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        LoanEntity returned = loanService.returnLoan(7L, 10L, false, false, testUser, today);
+
+        assertEquals(testUser, returned.getReturnedBy());
+        assertNotNull(returned.getReturnedAt());
+        assertEquals(LoanStatus.RECEIVED, returned.getStatus());
+    }
+
+    @Test
+    void markOverdueLoansAsLate_UpdatesStatusAndRestrictsClient() {
+        LocalDate today = LocalDate.now();
+        ClientEntity client = ClientEntity.builder().id(3L).status(ClientStatus.ACTIVE).build();
+        LoanEntity overdue = LoanEntity.builder().id(1L).client(client).tool(toolAvailable)
+                .dueDate(today.minusDays(2)).status(LoanStatus.ACTIVE).build();
+        when(loanRepository.findByStatusAndDueDateBefore(LoanStatus.ACTIVE, today)).thenReturn(List.of(overdue));
+
+        int updated = loanService.markOverdueLoansAsLate();
+
+        assertEquals(1, updated);
+        assertEquals(LoanStatus.LATE, overdue.getStatus());
+        assertEquals(ClientStatus.RESTRICTED, client.getStatus());
+        verify(loanRepository).save(overdue);
+        verify(clientService).updateStatus(3L, ClientStatus.RESTRICTED);
+    }
+
+    @Test
+    void markOverdueLoansAsLate_DoesNotRestrictAlreadyRestrictedClient() {
+        LocalDate today = LocalDate.now();
+        LoanEntity overdue = LoanEntity.builder().id(2L).client(clientRestricted).tool(toolAvailable)
+                .dueDate(today.minusDays(1)).status(LoanStatus.ACTIVE).build();
+        when(loanRepository.findByStatusAndDueDateBefore(LoanStatus.ACTIVE, today)).thenReturn(List.of(overdue));
+
+        assertEquals(1, loanService.markOverdueLoansAsLate());
+        assertEquals(LoanStatus.LATE, overdue.getStatus());
+        verify(clientService, never()).updateStatus(anyLong(), any(ClientStatus.class));
+    }
+
+    @Test
+    void markOverdueLoansAsLate_ReturnsZeroWhenNothingIsOverdue() {
+        when(loanRepository.findByStatusAndDueDateBefore(eq(LoanStatus.ACTIVE), any(LocalDate.class)))
+                .thenReturn(Collections.emptyList());
+
+        assertEquals(0, loanService.markOverdueLoansAsLate());
+        verify(loanRepository, never()).save(any(LoanEntity.class));
+    }
+
 }

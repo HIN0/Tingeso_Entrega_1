@@ -20,6 +20,7 @@ public interface LoanRepository extends JpaRepository<LoanEntity, Long> {
        List<LoanEntity> findByClientAndStatus(ClientEntity client, LoanStatus status);
        List<LoanEntity> findByClientAndStatusAndTotalPenaltyGreaterThan(ClientEntity client, LoanStatus status, double penaltyThreshold);
        long countByClientAndStatus(ClientEntity client, LoanStatus status);
+       List<LoanEntity> findByStatusAndDueDateBefore(LoanStatus status, LocalDate date);
 
 @Query("SELECT l.tool, COUNT(l) as total " +
        "FROM LoanEntity l " +

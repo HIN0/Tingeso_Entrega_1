@@ -8,8 +8,8 @@ function LoanList() {
   const { keycloak } = useKeycloak();
   const isAuth = !!keycloak?.authenticated;
   const isAdmin = isAuth && keycloak.hasRealmRole("ADMIN");
-  // Uso el rol 'USER' como alias para 'Employee' (según SecurityConfig)
-  const isUser = isAuth && keycloak.hasRealmRole("USER");
+  // EMPLOYEE realm role (Keycloak)
+  const isUser = isAuth && keycloak.hasRealmRole("EMPLOYEE");
 
   const loadLoans = () => {
     LoanService.getAll()

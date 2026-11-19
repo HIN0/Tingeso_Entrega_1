@@ -105,4 +105,47 @@ public class UserServiceTest {
         // Verificar que el repositorio fue llamado
         verify(userRepository, times(1)).findByUsername(username);
     }
+
+    // =======================================================================
+    // MÉTODO: findOrCreate (user provisioning from the Keycloak JWT)
+    // =======================================================================
+
+    @Test
+    void findOrCreate_CreatesUserWhenMissing() {
+        when(userRepository.findByUsername("maria")).thenReturn(Optional.empty());
+        when(userRepository.save(any(UserEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        UserEntity result = userService.findOrCreate("maria", UserRole.EMPLOYEE);
+
+        assertEquals("maria", result.getUsername());
+        assertEquals(UserRole.EMPLOYEE, result.getRole());
+        verify(userRepository).save(any(UserEntity.class));
+    }
+
+    @Test
+    void findOrCreate_ReturnsExistingUserWithoutSaving() {
+        UserEntity existing = UserEntity.builder().id(1L).username("diego").role(UserRole.ADMIN).build();
+        when(userRepository.findByUsername("diego")).thenReturn(Optional.of(existing));
+
+        assertSame(existing, userService.findOrCreate("diego", UserRole.ADMIN));
+        verify(userRepository, never()).save(any(UserEntity.class));
+    }
+
+    @Test
+    void findOrCreate_SyncsRoleWhenItChangedInKeycloak() {
+        UserEntity existing = UserEntity.builder().id(2L).username("juan").role(UserRole.EMPLOYEE).build();
+        when(userRepository.findByUsername("juan")).thenReturn(Optional.of(existing));
+        when(userRepository.save(existing)).thenReturn(existing);
+
+        UserEntity result = userService.findOrCreate("juan", UserRole.ADMIN);
+
+        assertEquals(UserRole.ADMIN, result.getRole());
+        verify(userRepository).save(existing);
+    }
+
+    @Test
+    void findOrCreate_FailsOnBlankUsername() {
+        assertThrows(IllegalArgumentException.class, () -> userService.findOrCreate(" ", UserRole.EMPLOYEE));
+        assertThrows(IllegalArgumentException.class, () -> userService.findOrCreate(null, UserRole.EMPLOYEE));
+    }
 }
