@@ -57,5 +57,12 @@ docker compose up -d
 
 ## Notes
 
+- **Do not upgrade Jenkins from the web UI.** The UI replaces the `jenkins.war` inside the container, and a newer
+  release may require a newer Java than the image provides, so Jenkins stops starting. Upgrade by rebuilding the image
+  (configuration is kept in the `jenkins_home` volume):
+  ```bash
+  docker compose -f jenkins/compose.yml up -d --build --pull always --force-recreate
+  ```
+  Updating *plugins* from the UI is fine.
 - The container runs as `root` only to access the Docker socket; this setup is meant for local development.
 - Stop Jenkins: `docker compose -f jenkins/compose.yml down` (add `-v` to also delete its configuration).

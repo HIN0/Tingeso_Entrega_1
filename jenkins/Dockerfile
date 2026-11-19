@@ -1,8 +1,10 @@
 # Jenkins for the ToolRent CI/CD pipeline (local use).
-# - JDK 17: runs the backend tests (mvnw) inside the pipeline
+# - JDK 21: required by current Jenkins releases; it also runs the backend tests (mvnw),
+#   which target Java 17 (a newer JDK compiles and runs older targets)
 # - Docker CLI + buildx: builds and pushes the images using the host Docker engine (shared socket)
 # - Plugins required by the Jenkinsfile
-FROM jenkins/jenkins:lts-jdk17
+# Update Jenkins by rebuilding this image, not from the web UI (see README.md)
+FROM jenkins/jenkins:lts-jdk21
 
 USER root
 # Static Docker CLI and its plugins (buildx, compose) taken from the official docker:cli image
