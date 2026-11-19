@@ -32,6 +32,15 @@ class ToolService {
   decommission(id) {
     return http.put(`/tools/${id}/decommission`);
   }
+
+  // --- REPAIR EVALUATION (one damaged unit) ---
+  completeRepair(id) {
+    return http.patch(`/tools/${id}/repair/complete`);
+  }
+
+  writeOffRepair(id) {
+    return http.patch(`/tools/${id}/repair/write-off`);
+  }
 }
 
 export default new ToolService();

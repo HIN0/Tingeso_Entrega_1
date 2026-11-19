@@ -27,6 +27,9 @@ public record CreateToolRequest(
                 .category(category.trim())
                 .stock(stock)
                 .replacementValue(replacementValue)
+                // A new tool has no units loaned or in repair (required by the entity constraints)
+                .inRepair(0)
+                .loaned(0)
                 .build();
     }
 }

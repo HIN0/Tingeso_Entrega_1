@@ -58,6 +58,22 @@ public class ToolController {
         return toolService.adjustStock(id, request.quantityChange(), currentUser);
     }
 
+    // Repair evaluation of one damaged unit: repaired -> back to stock
+    @PatchMapping("/{id}/repair/complete")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ToolEntity completeRepair(@PathVariable Long id, Authentication authentication) {
+        UserEntity currentUser = securityUtils.getUserFromAuthentication(authentication);
+        return toolService.completeRepair(id, currentUser);
+    }
+
+    // Repair evaluation of one damaged unit: irreparable -> removed permanently
+    @PatchMapping("/{id}/repair/write-off")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ToolEntity writeOffRepair(@PathVariable Long id, Authentication authentication) {
+        UserEntity currentUser = securityUtils.getUserFromAuthentication(authentication);
+        return toolService.writeOffRepair(id, currentUser);
+    }
+
     @PutMapping("/{id}/decommission")
     @PreAuthorize("hasRole('ADMIN')")
     public ToolEntity decommissionTool(@PathVariable Long id, Authentication authentication) {

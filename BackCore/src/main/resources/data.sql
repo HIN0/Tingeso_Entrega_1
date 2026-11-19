@@ -42,39 +42,39 @@ SELECT * FROM (VALUES
 WHERE NOT EXISTS (SELECT 1 FROM clients);
 
 -- TOOLS (EP. 1) - 30 tools in 5 categories
-INSERT INTO tools (name, category, status, stock, in_repair, replacement_value)
+INSERT INTO tools (name, category, status, stock, in_repair, loaned, replacement_value)
 SELECT * FROM (VALUES
-    ('Sierra Caladora Inalámbrica'  ,'Carpentry'        ,'AVAILABLE'        ,5  ,0 ,30000),
-    ('Cepilladora Eléctrica'        ,'Carpentry'        ,'AVAILABLE'        ,10 ,0 ,55000),
-    ('Serrucho de Costilla'         ,'Carpentry'        ,'AVAILABLE'        ,15 ,0 ,7000),
-    ('Gubia para Madera'            ,'Carpentry'        ,'DECOMMISSIONED'   ,0  ,0 ,4000),
-    ('Sargento Fijo (Grande)'       ,'Carpentry'        ,'DECOMMISSIONED'   ,0  ,0 ,15000),
-    ('Lijadora Orbital'             ,'Carpentry'        ,'REPAIRING'        ,0  ,55 ,40000),
-    ('Taladro Bosch (Heavy Duty)'   ,'Electric Tools'   ,'AVAILABLE'        ,5  ,0 ,45000),
-    ('Atornillador de Impacto'      ,'Electric Tools'   ,'AVAILABLE'        ,10 ,0 ,35000),
-    ('Multiherramienta Oscilante'   ,'Electric Tools'   ,'AVAILABLE'        ,15 ,0 ,28000),
-    ('Pistola de Calor'             ,'Electric Tools'   ,'DECOMMISSIONED'   ,0  ,0 ,10000),
-    ('Sierra Circular Makita'       ,'Electric Tools'   ,'REPAIRING'        ,0  ,55 ,60000),
-    ('Amoladora Angular'            ,'Electric Tools'   ,'REPAIRING'        ,0  ,55 ,30000),
-    ('Martillo Stanley (Curvo)'     ,'Hand Tools'       ,'AVAILABLE'        ,10 ,0 ,8000),
-    ('Set de Llaves Allen'          ,'Hand Tools'       ,'AVAILABLE'        ,15 ,0 ,6000),
-    ('Nivel de Burbuja 60cm'        ,'Hand Tools'       ,'AVAILABLE'        ,30 ,0 ,9000),
-    ('Alicate Universal'            ,'Hand Tools'       ,'AVAILABLE'        ,60 ,0 ,5000),
-    ('Cinta Métrica 5m'             ,'Hand Tools'       ,'DECOMMISSIONED'   ,0  ,0 ,3000),
-    ('Llave Francesa Ajustable'     ,'Hand Tools'       ,'DECOMMISSIONED'   ,0  ,0 ,5000),
-    ('Soplete de Propano'           ,'Plumbing'         ,'AVAILABLE'        ,5  ,0 ,22000),
-    ('Cortatubos de Cobre'          ,'Plumbing'         ,'AVAILABLE'        ,5  ,0 ,15000),
-    ('Llave Stilson 18"'            ,'Plumbing'         ,'AVAILABLE'        ,5  ,0 ,18000),
-    ('Desatascador de Serpiente 7m' ,'Plumbing'         ,'AVAILABLE'        ,5  ,0 ,12000),
-    ('Bomba de Succión Manual'      ,'Plumbing'         ,'AVAILABLE'        ,5  ,0 ,11000),
-    ('Máquina Roscadora Manual'     ,'Plumbing'         ,'DECOMMISSIONED'   ,0  ,0 ,25000),
-    ('Tijera de Podar Telescópica'  ,'Gardening'        ,'AVAILABLE'        ,10  ,0 ,15000),
-    ('Carretilla Reforzada'         ,'Gardening'        ,'AVAILABLE'        ,10  ,0 ,20000),
-    ('Pala Punta Redonda'           ,'Gardening'        ,'AVAILABLE'        ,15  ,0 ,9500),
-    ('Rastrillo Metálico'           ,'Gardening'        ,'AVAILABLE'        ,15  ,0 ,6000),
-    ('Manguera Retráctil 20m'       ,'Gardening'        ,'AVAILABLE'        ,15  ,0 ,28000),
-    ('Motosierra Eléctrica'         ,'Gardening'        ,'REPAIRING'        ,0   ,55 ,55000)
-) AS v(name, category, status, stock, in_repair, replacement_value)
+    ('Sierra Caladora Inalámbrica'  ,'Carpentry'        ,'AVAILABLE'        ,5  , 0 ,2 ,30000),
+    ('Cepilladora Eléctrica'        ,'Carpentry'        ,'AVAILABLE'        ,10 , 0 ,2 ,55000),
+    ('Serrucho de Costilla'         ,'Carpentry'        ,'AVAILABLE'        ,15 , 0 ,2 ,7000),
+    ('Gubia para Madera'            ,'Carpentry'        ,'DECOMMISSIONED'   ,0  , 0 ,0 ,4000),
+    ('Sargento Fijo (Grande)'       ,'Carpentry'        ,'DECOMMISSIONED'   ,0  , 0 ,0 ,15000),
+    ('Lijadora Orbital'             ,'Carpentry'        ,'REPAIRING'        ,0  , 2 ,0 ,40000),
+    ('Taladro Bosch (Heavy Duty)'   ,'Electric Tools'   ,'AVAILABLE'        ,5  , 0 ,1 ,45000),
+    ('Atornillador de Impacto'      ,'Electric Tools'   ,'AVAILABLE'        ,10 , 0 ,1 ,35000),
+    ('Multiherramienta Oscilante'   ,'Electric Tools'   ,'AVAILABLE'        ,15 , 0 ,0 ,28000),
+    ('Pistola de Calor'             ,'Electric Tools'   ,'DECOMMISSIONED'   ,0  , 0 ,0 ,10000),
+    ('Sierra Circular Makita'       ,'Electric Tools'   ,'REPAIRING'        ,0  , 2 ,0 ,60000),
+    ('Amoladora Angular'            ,'Electric Tools'   ,'REPAIRING'        ,0  , 2 ,0 ,30000),
+    ('Martillo Stanley (Curvo)'     ,'Hand Tools'       ,'AVAILABLE'        ,10 , 0 ,0 ,8000),
+    ('Set de Llaves Allen'          ,'Hand Tools'       ,'AVAILABLE'        ,15 , 0 ,0 ,6000),
+    ('Nivel de Burbuja 60cm'        ,'Hand Tools'       ,'AVAILABLE'        ,30 , 0 ,0 ,9000),
+    ('Alicate Universal'            ,'Hand Tools'       ,'AVAILABLE'        ,60 , 0 ,0 ,5000),
+    ('Cinta Métrica 5m'             ,'Hand Tools'       ,'DECOMMISSIONED'   ,0  , 0 ,0 ,3000),
+    ('Llave Francesa Ajustable'     ,'Hand Tools'       ,'DECOMMISSIONED'   ,0  , 0 ,0 ,5000),
+    ('Soplete de Propano'           ,'Plumbing'         ,'AVAILABLE'        ,5  , 0 ,0 ,22000),
+    ('Cortatubos de Cobre'          ,'Plumbing'         ,'AVAILABLE'        ,5  , 0 ,0 ,15000),
+    ('Llave Stilson 18"'            ,'Plumbing'         ,'AVAILABLE'        ,5  , 0 ,0 ,18000),
+    ('Desatascador de Serpiente 7m' ,'Plumbing'         ,'AVAILABLE'        ,5  , 0 ,0 ,12000),
+    ('Bomba de Succión Manual'      ,'Plumbing'         ,'AVAILABLE'        ,5  , 0 ,0 ,11000),
+    ('Máquina Roscadora Manual'     ,'Plumbing'         ,'DECOMMISSIONED'   ,0  , 0 ,0 ,25000),
+    ('Tijera de Podar Telescópica'  ,'Gardening'        ,'AVAILABLE'        ,10  , 0 ,0 ,15000),
+    ('Carretilla Reforzada'         ,'Gardening'        ,'AVAILABLE'        ,10  , 0 ,0 ,20000),
+    ('Pala Punta Redonda'           ,'Gardening'        ,'AVAILABLE'        ,15  , 0 ,0 ,9500),
+    ('Rastrillo Metálico'           ,'Gardening'        ,'AVAILABLE'        ,15  , 0 ,0 ,6000),
+    ('Manguera Retráctil 20m'       ,'Gardening'        ,'AVAILABLE'        ,15  , 0 ,0 ,28000),
+    ('Motosierra Eléctrica'         ,'Gardening'        ,'REPAIRING'        ,0   , 2 ,0 ,55000)
+) AS v(name, category, status, stock, in_repair, loaned, replacement_value)
 WHERE NOT EXISTS (SELECT 1 FROM tools);
 
 -- LOANS (EP. 2) - 5 ACTIVE, 3 LATE, 3 RECEIVED (returned, pending payment)

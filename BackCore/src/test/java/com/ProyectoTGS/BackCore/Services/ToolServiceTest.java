@@ -401,6 +401,7 @@ public class ToolServiceTest {
                         .stock(0) // Típicamente 0 si está prestada la última unidad
                         .replacementValue(50000)
                         .inRepair(0)
+                        .loaned(1) // the rule now checks the loaned-units counter
                         .build();
 
                 // 2. Mockear el repositorio:
@@ -663,10 +664,7 @@ public class ToolServiceTest {
         // =======================================================================
 
         /**
-         * Prueba que al marcar una herramienta para reparación:
-         * 1. El contador 'inRepair' aumenta en 1.
-         * 2. Se registra el Kardex como REPAIR.
-         * 3. (Importante) El stock DISPONIBLE no se modifica.
+         * Damaged return: the unit moves from "loaned" to "in repair"; available stock is untouched.
          */
         @Test
         void markAsRepairing_Success() {
@@ -678,23 +676,20 @@ public class ToolServiceTest {
                         .stock(5) // Stock disponible
                         .replacementValue(10000)
                         .inRepair(0) // Contador inicial
+                        .loaned(1)   // the unit being returned
                         .build();
-                
-                // (No se llama a save() en este método, solo a Kardex)
-                doNothing().when(kardexService).registerMovement(any(ToolEntity.class), any(MovementType.class), anyInt(), any(UserEntity.class));
 
                 // ACT
                 toolService.markAsRepairing(toolToRepair, testUser);
 
                 // ASSERT
                 assertEquals(1, toolToRepair.getInRepair()); // 'inRepair' aumentó
-                assertEquals(5, toolToRepair.getStock()); // 'stock' no cambió
-                // El estado tampoco cambia en esta lógica (se maneja en LoanService si es necesario)
-                assertEquals(ToolStatus.AVAILABLE, toolToRepair.getStatus()); 
+                assertEquals(0, toolToRepair.getLoaned());   // the unit is no longer with the client
+                assertEquals(5, toolToRepair.getStock());    // 'stock' no cambió
+                assertEquals(ToolStatus.AVAILABLE, toolToRepair.getStatus()); // still has stock to lend
 
-                // Verificar que NO se llamó a save (según el código actual)
-                verify(toolRepository, never()).save(any(ToolEntity.class));
-                
+                verify(toolRepository, times(1)).save(toolToRepair);
+
                 // Verificar que se llamó al Kardex
                 verify(kardexService, times(1)).registerMovement(
                         eq(toolToRepair), eq(MovementType.REPAIR), eq(1), eq(testUser)
@@ -730,35 +725,31 @@ public class ToolServiceTest {
         // =======================================================================
 
         /**
-         * Prueba que al marcar una herramienta como DECOMMISSIONED (por devolución irreparable):
-         * 1. Se registra el Kardex como DECOMMISSION (cantidad 1).
-         * 2. (Importante) Este método NO cambia el estado ni el stock, solo registra Kardex.
+         * Irreparable return: the loaned unit disappears (DECOMMISSION of 1 unit in the Kardex).
+         * Other units keep the tool alive, so the tool itself is not decommissioned.
          */
         @Test
         void markAsDecommissioned_Success() {
-                // ARRANGE
+                // ARRANGE: last loaned unit comes back destroyed; another unit is in repair
                 ToolEntity toolToDecommission = ToolEntity.builder()
                         .id(14L)
                         .name("Herramienta Irreparable")
-                        .status(ToolStatus.REPAIRING) // Estado original (ej. se marcó 'en reparación' primero)
+                        .status(ToolStatus.LOANED)
                         .stock(0)
                         .inRepair(1)
+                        .loaned(1)
                         .build();
-                
-                doNothing().when(kardexService).registerMovement(any(ToolEntity.class), any(MovementType.class), anyInt(), any(UserEntity.class));
 
                 // ACT
                 toolService.markAsDecommissioned(toolToDecommission, testUser);
 
                 // ASSERT
-                // Verificar que los estados NO cambiaron (este método solo registra Kardex)
-                assertEquals(ToolStatus.REPAIRING, toolToDecommission.getStatus());
+                assertEquals(0, toolToDecommission.getLoaned());
                 assertEquals(0, toolToDecommission.getStock());
                 assertEquals(1, toolToDecommission.getInRepair());
-                
-                // Verificar que NO se llamó a save
-                verify(toolRepository, never()).save(any(ToolEntity.class));
-                
+                assertEquals(ToolStatus.REPAIRING, toolToDecommission.getStatus()); // only the unit in repair remains
+                verify(toolRepository, times(1)).save(toolToDecommission);
+
                 // Verificar que se llamó al Kardex
                 verify(kardexService, times(1)).registerMovement(
                         eq(toolToDecommission), eq(MovementType.DECOMMISSION), eq(1), eq(testUser)
@@ -824,9 +815,9 @@ public class ToolServiceTest {
         }
 
         /**
-         * Prueba una DISMINUCIÓN de stock manual exitosa.
-         * Verifica que el stock disminuya, el estado (si llega a 0) cambie a LOANED,
-         * y se registre el Kardex como MANUAL_DECREASE.
+         * Manual decrease to zero with no units loaned or in repair.
+         * Previously this wrongly set the status to LOANED; nobody has the tool, so it stays AVAILABLE
+         * (registered, with no stock to lend until an income).
          */
         @Test
         void adjustStock_Success_WhenDecreasingStockToZero() {
@@ -849,7 +840,7 @@ public class ToolServiceTest {
 
                 // ASSERT
                 assertEquals(0, updatedTool.getStock()); // Stock es CERO
-                assertEquals(ToolStatus.LOANED, updatedTool.getStatus()); // Estado cambió a LOANED
+                assertEquals(ToolStatus.AVAILABLE, updatedTool.getStatus()); // nobody has it: not LOANED
                 verify(toolRepository, times(1)).save(tool);
                 verify(kardexService, times(1)).registerMovement(
                         eq(tool), eq(MovementType.MANUAL_DECREASE), eq(3), eq(testUser) // Cantidad 3 (Math.abs)
@@ -857,10 +848,11 @@ public class ToolServiceTest {
         }
 
         /**
-         * Prueba que el ajuste NO cambia el estado a AVAILABLE si la herramienta está EN REPARACIÓN.
+         * A tool whose only unit is in repair receives new stock: it can be lent again, so it becomes
+         * AVAILABLE while the damaged unit stays counted in inRepair.
          */
         @Test
-        void adjustStock_Success_DoesNotChangeStatusWhenRepairing() {
+        void adjustStock_Success_BecomesAvailableWhenStockArrivesDuringRepair() {
                 // ARRANGE
                 Long toolId = 18L;
                 ToolEntity tool = ToolEntity.builder()
@@ -880,7 +872,8 @@ public class ToolServiceTest {
 
                 // ASSERT
                 assertEquals(2, updatedTool.getStock()); // Stock aumentó
-                assertEquals(ToolStatus.REPAIRING, updatedTool.getStatus()); // Estado NO cambió
+                assertEquals(1, updatedTool.getInRepair()); // the damaged unit is still in repair
+                assertEquals(ToolStatus.AVAILABLE, updatedTool.getStatus()); // it can be lent again
                 verify(toolRepository, times(1)).save(tool);
                 verify(kardexService, times(1)).registerMovement(
                         eq(tool), eq(MovementType.INCOME), eq(2), eq(testUser)
@@ -1037,4 +1030,112 @@ public class ToolServiceTest {
                 verify(toolRepository, times(1)).findById(nonExistentToolId);
         }
 
+        // =======================================================================
+        // REPAIR FLOW: completeRepair / writeOffRepair
+        // =======================================================================
+
+        @Test
+        void completeRepair_MovesUnitBackToStock() {
+                ToolEntity tool = ToolEntity.builder().id(30L).status(ToolStatus.REPAIRING)
+                        .stock(0).loaned(0).inRepair(2).replacementValue(10000).build();
+                when(toolRepository.findById(30L)).thenReturn(Optional.of(tool));
+                when(toolRepository.save(tool)).thenReturn(tool);
+
+                ToolEntity result = toolService.completeRepair(30L, testUser);
+
+                assertEquals(1, result.getInRepair());
+                assertEquals(1, result.getStock());
+                assertEquals(ToolStatus.AVAILABLE, result.getStatus());
+                verify(kardexService).registerMovement(tool, MovementType.REPAIRED, 1, testUser);
+        }
+
+        @Test
+        void writeOffRepair_RemovesUnitPermanently() {
+                ToolEntity tool = ToolEntity.builder().id(31L).status(ToolStatus.REPAIRING)
+                        .stock(0).loaned(1).inRepair(1).replacementValue(10000).build();
+                when(toolRepository.findById(31L)).thenReturn(Optional.of(tool));
+                when(toolRepository.save(tool)).thenReturn(tool);
+
+                ToolEntity result = toolService.writeOffRepair(31L, testUser);
+
+                assertEquals(0, result.getInRepair());
+                assertEquals(0, result.getStock());
+                assertEquals(ToolStatus.LOANED, result.getStatus()); // the remaining unit is with a client
+                verify(kardexService).registerMovement(tool, MovementType.DECOMMISSION, 1, testUser);
+        }
+
+        @Test
+        void completeRepair_FailsWhenNoUnitsAreInRepair() {
+                ToolEntity tool = ToolEntity.builder().id(32L).status(ToolStatus.AVAILABLE)
+                        .stock(3).loaned(0).inRepair(0).build();
+                when(toolRepository.findById(32L)).thenReturn(Optional.of(tool));
+
+                assertThrows(InvalidOperationException.class, () -> toolService.completeRepair(32L, testUser));
+                assertThrows(InvalidOperationException.class, () -> toolService.writeOffRepair(32L, testUser));
+                verify(toolRepository, never()).save(any());
+                verify(kardexService, never()).registerMovement(any(), any(), anyInt(), any());
+        }
+
+        // =======================================================================
+        // STATUS RULES (derived from the unit counters)
+        // =======================================================================
+
+        @Test
+        void decommissionTool_Fails_WhenUnitsAreInRepairEvenIfStatusIsAvailable() {
+                // Status AVAILABLE (has stock) but one unit is still waiting for repair evaluation
+                ToolEntity tool = ToolEntity.builder().id(33L).status(ToolStatus.AVAILABLE)
+                        .stock(4).loaned(0).inRepair(1).build();
+                when(toolRepository.findById(33L)).thenReturn(Optional.of(tool));
+
+                assertThrows(InvalidOperationException.class, () -> toolService.decommissionTool(33L, testUser));
+                verify(toolRepository, never()).save(any());
+        }
+
+        @Test
+        void decommissionTool_Fails_WhenSomeUnitsAreLoanedEvenIfStatusIsAvailable() {
+                ToolEntity tool = ToolEntity.builder().id(34L).status(ToolStatus.AVAILABLE)
+                        .stock(4).loaned(1).inRepair(0).build();
+                when(toolRepository.findById(34L)).thenReturn(Optional.of(tool));
+
+                assertThrows(InvalidOperationException.class, () -> toolService.decommissionTool(34L, testUser));
+                verify(toolRepository, never()).save(any());
+        }
+
+        @Test
+        void decrementStockForLoan_LastUnitMakesToolLoaned_AndCountsIt() {
+                ToolEntity tool = ToolEntity.builder().id(35L).status(ToolStatus.AVAILABLE)
+                        .stock(1).inRepair(0).build(); // loaned null: legacy row before the counter existed
+
+                toolService.decrementStockForLoan(tool, testUser);
+
+                assertEquals(0, tool.getStock());
+                assertEquals(1, tool.getLoaned());
+                assertEquals(ToolStatus.LOANED, tool.getStatus());
+        }
+
+        @Test
+        void incrementStockForReturn_DecreasesLoanedCounter() {
+                ToolEntity tool = ToolEntity.builder().id(36L).status(ToolStatus.LOANED)
+                        .stock(0).loaned(2).inRepair(0).build();
+
+                toolService.incrementStockForReturn(tool, testUser);
+
+                assertEquals(1, tool.getStock());
+                assertEquals(1, tool.getLoaned());
+                assertEquals(ToolStatus.AVAILABLE, tool.getStatus());
+        }
+
+        @Test
+        void createTool_IgnoresIncomingCountersAndStatus() {
+                ToolEntity tool = ToolEntity.builder().name("Sierra").category("Carpentry")
+                        .stock(0).inRepair(7).loaned(3).status(ToolStatus.DECOMMISSIONED)
+                        .replacementValue(20000).build();
+                when(toolRepository.save(tool)).thenReturn(tool);
+
+                ToolEntity saved = toolService.createTool(tool, testUser);
+
+                assertEquals(0, saved.getInRepair());
+                assertEquals(0, saved.getLoaned());
+                assertEquals(ToolStatus.AVAILABLE, saved.getStatus());
+        }
 }

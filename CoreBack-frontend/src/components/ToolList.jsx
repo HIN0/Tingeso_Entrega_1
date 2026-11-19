@@ -26,7 +26,6 @@ const sortTools = (a, b) => {
 // ------------------------------------------
 
 function ToolList() {
-  const [tools, setTools] = useState([]);
   const [activeTools, setActiveTools] = useState([]); // Nueva lista para herramientas activas
   const [decommissionedTools, setDecommissionedTools] = useState([]); // Nueva lista para herramientas de baja
   
@@ -85,6 +84,25 @@ function ToolList() {
     }
   };
 
+  // Repair evaluation of one damaged unit: "complete" returns it to stock, "write-off" removes it
+  const handleRepair = (tool, action) => {
+    setError('');
+    const question = action === 'complete'
+      ? `Mark one unit of "${tool.name}" as repaired? It goes back to the available stock.`
+      : `Write off one unit of "${tool.name}"? The damage is irreparable and the unit is removed permanently.`;
+    if (!window.confirm(question)) return;
+
+    const request = action === 'complete'
+      ? ToolService.completeRepair(tool.id)
+      : ToolService.writeOffRepair(tool.id);
+    request
+      .then(loadTools)
+      .catch(e => {
+          const errorMsg = e.response?.data?.message || "Failed to update the repair.";
+          setError(`Error updating repair for tool ${tool.id}: ${errorMsg}`);
+      });
+  };
+
   const startStockAdjustment = (id, type) => {
       setError('');
       setAdjustment({ id, quantity: 1, type });
@@ -133,22 +151,23 @@ function ToolList() {
           ======================================================================================================== */}
       <table border="1" style={{ width: '95%', marginTop: '15px',marginLeft: 'auto', marginRight: 'auto', borderCollapse: 'collapse'}}>
         
-        {/* --- COLGROUP DE 8 COLUMNAS (TABLA 1) --- */}
+        {/* --- COLGROUP DE 9 COLUMNAS (TABLA 1) --- */}
         <colgroup>
-            <col style={{ width: '5%' }} />    {/* 1. ID */}
-            <col style={{ width: '20%' }} />   {/* 2. Name */}
-            <col style={{ width: '15%' }} />   {/* 3. Category */}
-            <col style={{ width: '10%' }} />   {/* 4. Status */}
+            <col style={{ width: '4%' }} />    {/* 1. ID */}
+            <col style={{ width: '17%' }} />   {/* 2. Name */}
+            <col style={{ width: '11%' }} />   {/* 3. Category */}
+            <col style={{ width: '9%' }} />    {/* 4. Status */}
             <col style={{ width: '5%' }} />    {/* 5. Stock */}
-            <col style={{ width: '10%' }} />   {/* 6. In Repair */}
-            <col style={{ width: '15%' }} />   {/* 7. Repl. Value */}
-            <col style={{ width: '20%' }} />   {/* 8. Actions */}
+            <col style={{ width: '6%' }} />    {/* 6. Loaned */}
+            <col style={{ width: '6%' }} />    {/* 7. In Repair */}
+            <col style={{ width: '9%' }} />    {/* 8. Repl. Value */}
+            <col style={{ width: '33%' }} />   {/* 9. Actions */}
         </colgroup>
         
       {/* --- NUEVA FILA DE TÍTULO VERDE --- */}
         <thead>
           <tr>
-            <th colSpan="8" style={{ backgroundColor: '#65e10cff', color: 'white', textAlign: 'center', padding: '8px' }}>
+            <th colSpan="9" style={{ backgroundColor: '#65e10cff', color: 'white', textAlign: 'center', padding: '8px' }}>
                 ACTIVE ({activeTools.length - activeTools.filter(t => t.status === 'REPAIRING').length}) AND REPAIRING ({activeTools.filter(t => t.status === 'REPAIRING').length})
             </th>
           </tr>
@@ -160,6 +179,7 @@ function ToolList() {
             <th>Category</th>
             <th>Status</th>
             <th>Stock</th>
+            <th>Loaned</th>
             <th>In Repair</th>
             <th>Repl. Value</th>
             {isAdmin && <th>Actions</th>}
@@ -173,6 +193,7 @@ function ToolList() {
               <td>{tool.category}</td>
               <td>{tool.status}</td>
               <td>{tool.stock}</td>
+              <td>{tool.loaned ?? 0}</td>
               <td>{tool.inRepair}</td>
               <td>${tool.replacementValue}</td>
               {isAdmin && (
@@ -222,13 +243,32 @@ function ToolList() {
                   )}
 
                   {/* Lógica de Decommission */}
+                  {/* Repair evaluation: only when there are damaged units waiting */}
+                  {tool.inRepair > 0 && (
+                    <>
+                      <button
+                        onClick={() => handleRepair(tool, 'complete')}
+                        style={{ marginRight: '5px', backgroundColor: 'steelblue', color: 'white' }}
+                      >
+                        Repaired
+                      </button>
+                      <button
+                        onClick={() => handleRepair(tool, 'write-off')}
+                        style={{ marginRight: '5px', backgroundColor: 'firebrick', color: 'white' }}
+                      >
+                        Irreparable
+                      </button>
+                    </>
+                  )}
+
+                  {/* Decommission the whole tool: not allowed while units are loaned or in repair */}
                   {tool.status !== "DECOMMISSIONED" && (
-                    <button onClick={() => handleDecommission(tool.id)} disabled={tool.status === 'LOANED' || tool.status === 'REPAIRING'}>
+                    <button onClick={() => handleDecommission(tool.id)} disabled={(tool.loaned ?? 0) > 0 || tool.inRepair > 0}>
                       Decommission
                     </button>
                   )}
-                  {(tool.status === 'LOANED' || tool.status === 'REPAIRING') && (
-                      <span style={{ fontSize: '0.8em', marginLeft: '5px' }}>(Cannot decommission while {tool.status})</span>
+                  {((tool.loaned ?? 0) > 0 || tool.inRepair > 0) && (
+                      <span style={{ fontSize: '0.8em', marginLeft: '5px' }}>(Cannot decommission while units are loaned or in repair)</span>
                   )}
                 </td>
               )}
