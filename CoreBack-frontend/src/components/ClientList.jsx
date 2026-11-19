@@ -5,7 +5,7 @@ import { useKeycloak } from "@react-keycloak/web";
 import { Link } from "react-router-dom";
 import { getErrorMessage } from "../utils/apiError";
 
-// Componente simple para mostrar los detalles de las deudas debajo de la fila del cliente
+// Shows the unpaid debts of a client below its row
 function DebtDetails({ clientId, messageSetter }) {
   const [debts, setDebts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,62 +18,62 @@ function DebtDetails({ clientId, messageSetter }) {
       .then(response => {
         setDebts(response.data);
         if (response.data.length === 0) {
-          setErrorMessage("No hay deudas pendientes (estado RECEIVED) para este cliente.");
+          setErrorMessage("This client has no pending debts (RECEIVED loans).");
         }
       })
       .catch(e => {
         console.error("Error fetching unpaid loans:", e);
-        setErrorMessage(`Error al cargar deudas: ${getErrorMessage(e)}`);
+        setErrorMessage(`Error loading debts: ${getErrorMessage(e)}`);
       })
       .finally(() => setLoading(false));
-  }, [clientId]); // Recargar si cambia el ID del cliente (aunque en este uso no cambiará mientras esté visible)
+  }, [clientId]); // reload if the client changes
 
   const handlePay = (loanId) => {
-    setErrorMessage(""); // Limpiar errores antes de intentar pagar
-    if (!window.confirm(`¿Marcar la deuda del préstamo #${loanId} como pagada?`)) {
+    setErrorMessage(""); // clear previous errors
+    if (!window.confirm(`Mark the debt of loan #${loanId} as paid?`)) {
         return;
     }
-    messageSetter(`Procesando pago para préstamo ${loanId}...`); // Usar el setter del componente padre
+    messageSetter(`Processing payment for loan ${loanId}...`); // message shown by the parent
     LoanService.markAsPaid(loanId)
       .then(() => {
-        messageSetter(`Pago registrado para préstamo ${loanId}. Actualizando lista...`);
-        // Recargar las deudas para esta fila
+        messageSetter(`Payment registered for loan ${loanId}. Refreshing...`);
+        // Reload the debts of this row
         setLoading(true);
         LoanService.getUnpaidLoansByClient(clientId)
           .then(response => setDebts(response.data))
-          .catch(e => setErrorMessage(`Error al recargar deudas: ${getErrorMessage(e)}`))
+          .catch(e => setErrorMessage(`Error reloading debts: ${getErrorMessage(e)}`))
           .finally(() => setLoading(false));
       })
       .catch(e => {
         console.error("Error marking loan as paid:", e);
-        setErrorMessage(`Error al marcar pago: ${getErrorMessage(e)}`);
-        messageSetter(""); // Limpiar mensaje de progreso si hay error
+        setErrorMessage(`Error registering payment: ${getErrorMessage(e)}`);
+        messageSetter(""); // clear the progress message
       });
   };
 
   if (loading) {
     return (
       <td colSpan="7" style={{ textAlign: 'center', padding: '10px', fontStyle: 'italic' }}>
-        Cargando deudas...
+        Loading debts...
       </td>
     );
   }
 
   return (
     <td colSpan="7" style={{ padding: '10px', backgroundColor: '#f0f0f0', borderTop: '2px solid grey' }}>
-      <h4 style={{ marginTop: 0 }}>Deudas Pendientes (Estado RECEIVED)</h4>
+      <h4 style={{ marginTop: 0 }}>Pending Debts (RECEIVED loans)</h4>
       {errorMessage && <p style={{ color: 'red' }}>{errorMessage}</p>}
       {debts.length > 0 ? (
         <table border="1" style={{ width: '95%', margin: 'auto', borderCollapse: 'collapse', backgroundColor: 'white', color: '#333' }}>
           <thead>
             <tr>
-              <th>Préstamo ID</th>
-              <th>Herramienta</th>
-              <th>Monto ($)</th>
-              <th>Inicio</th>
-              <th>Vencimiento</th>
-              <th>Devolución</th>
-              <th>Acción</th>
+              <th>Loan ID</th>
+              <th>Tool</th>
+              <th>Amount ($)</th>
+              <th>Start</th>
+              <th>Due</th>
+              <th>Returned</th>
+              <th>Action</th>
             </tr>
           </thead>
           <tbody>
@@ -87,7 +87,7 @@ function DebtDetails({ clientId, messageSetter }) {
                 <td>{loan.returnDate}</td>
                 <td>
                   <button onClick={() => handlePay(loan.id)} style={{ backgroundColor: 'green', color: 'white' }}>
-                    Pagar
+                    Pay
                   </button>
                 </td>
               </tr>
@@ -95,7 +95,7 @@ function DebtDetails({ clientId, messageSetter }) {
           </tbody>
         </table>
       ) : (
-        !errorMessage && <p>No se encontraron deudas pendientes (estado RECEIVED).</p>
+        !errorMessage && <p>No pending debts found (RECEIVED loans).</p>
       )}
     </td>
   );
@@ -110,7 +110,7 @@ function ClientList() {
   const isEmployee = isAuth && keycloak.hasRealmRole("EMPLOYEE");
   const [message, setMessage] = useState("");
 
-  // Nuevo estado para controlar qué cliente tiene los detalles de deuda visibles
+  // Client whose debt details are currently shown
   const [visibleDebtsClientId, setVisibleDebtsClientId] = useState(null);
 
   const loadClients = () => {
@@ -119,7 +119,7 @@ function ClientList() {
       .then(response => setClients(response.data))
       .catch(e => {
         console.error("Error fetching clients:", e);
-        setMessage("Error al cargar la lista de clientes.");
+        setMessage("Error loading the client list.");
       });
   };
 
@@ -129,51 +129,51 @@ function ClientList() {
     }
   }, [isAdmin, isEmployee]);
 
-  // Modificado: Usa 'attemptReactivation' cuando se intenta activar
+  // Restrict directly; activation goes through 'attemptReactivation' (validated by the backend)
   const handleUpdateStatus = (id, currentStatus, clientName) => {
     setMessage("");
     if (currentStatus === "ACTIVE") {
-      // Flujo para Restringir (igual)
-      if (window.confirm(`¿Seguro que quieres cambiar el estado del cliente ${clientName} (ID: ${id}) a RESTRICTED?`)) {
+      // Restrict
+      if (window.confirm(`Change the status of client ${clientName} (ID: ${id}) to RESTRICTED?`)) {
         ClientService.updateStatus(id, "RESTRICTED")
           .then(loadClients)
           .catch(e => {
             console.error(`Error updating client status to RESTRICTED:`, e);
-            setMessage(`Error al restringir: ${getErrorMessage(e)}`);
+            setMessage(`Error restricting client: ${getErrorMessage(e)}`);
           });
       }
     } else { // currentStatus === "RESTRICTED"
-      // Flujo para Activar (Usa nuevo método)
-      if (window.confirm(`¿Intentar reactivar al cliente ${clientName} (ID: ${id})? Se verificará que no tenga deudas ni atrasos.`)) {
-        ClientService.attemptReactivation(id) // Llama al servicio del frontend que llama al backend
+      // Activate (only if the client has no late loans or debts)
+      if (window.confirm(`Try to reactivate client ${clientName} (ID: ${id})? It must have no debts or late loans.`)) {
+        ClientService.attemptReactivation(id)
           .then((response) => {
-            setMessage(`Intento de activación para ${clientName}. Estado final: ${response.data.status}.`);
-            loadClients(); // Recargar para reflejar el cambio (si ocurrió)
+            setMessage(`Reactivation of ${clientName}: final status ${response.data.status}.`);
+            loadClients(); // reload to show the new status
           })
           .catch(e => {
             console.error(`Error attempting reactivation for client ${id}:`, e);
-            setMessage(`Error al intentar activar ${clientName}: ${getErrorMessage(e)}`);
+            setMessage(`Error reactivating ${clientName}: ${getErrorMessage(e)}`);
           });
       }
     }
   };
 
-  // Modificado: Ahora Muestra/Oculta los detalles de la deuda
+  // Show / hide the debt details of a client
   const handleShowOrHideDebts = (clientId) => {
-    setMessage(""); // Limpiar mensaje general
+    setMessage(""); // clear the general message
     if (visibleDebtsClientId === clientId) {
-      setVisibleDebtsClientId(null); // Si ya están visibles, ocúltalos
+      setVisibleDebtsClientId(null); // already visible: hide
     } else {
-      setVisibleDebtsClientId(clientId); // Si no, muéstralos
+      setVisibleDebtsClientId(clientId); // otherwise: show
     }
   };
 
   return (
     <div style={{ padding: 16 }}>
-      <h2>Gestión de Clientes</h2>
+      <h2>Client Management</h2>
       {isAdmin && (
         <Link to="/clients/add" style={{ marginBottom: '15px', display: 'inline-block' }}>
-          ➕ Registrar Nuevo Cliente
+          ➕ Register New Client
         </Link>
       )}
       {message && <p style={{ color: message.startsWith("Error") ? 'red' : 'green' }}>{message}</p>}
@@ -183,16 +183,16 @@ function ClientList() {
           <tr>
             <th>ID</th>
             <th>RUT</th>
-            <th>Nombre</th>
+            <th>Name</th>
             <th>Email</th>
-            <th>Teléfono</th>
-            <th>Estado</th>
-            <th>Acciones</th>
+            <th>Phone</th>
+            <th>Status</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
           {clients.map(client => (
-            // Usamos React.Fragment para poder renderizar dos filas por cliente si es necesario
+            // React.Fragment: a client may render a second row with its debts
             <React.Fragment key={client.id}>
               <tr>
                 <td>{client.id}</td>
@@ -202,36 +202,36 @@ function ClientList() {
                 <td>{client.phone}</td>
                 <td style={{ fontWeight: 'bold', color: client.status === 'RESTRICTED' ? 'red' : 'green' }}>{client.status}</td>
                 <td>
-                  {/* Editar (Solo Admin) */}
+                  {/* Edit (admin only) */}
                   {isAdmin && (
                     <Link to={`/clients/edit/${client.id}`} style={{ marginRight: '10px' }}>
-                      Editar
+                      Edit
                     </Link>
                   )}
-                  {/* Activar/Restringir (Solo Admin) */}
+                  {/* Activate / restrict (admin only) */}
                   {isAdmin && (
                     <button
                       onClick={() => handleUpdateStatus(client.id, client.status, client.name)}
                       style={{ backgroundColor: client.status === 'ACTIVE' ? 'darkred' : 'darkgreen', color: 'white', marginRight: '10px' }}
                     >
-                      {client.status === 'ACTIVE' ? 'Restringir' : 'Activar (Verificar)'}
+                      {client.status === 'ACTIVE' ? 'Restrict' : 'Activate (check)'}
                     </button>
                   )}
-                  {/* Ver/Ocultar Deudas (Admin o Empleado, solo si está restringido) */}
+                  {/* Show / hide debts (only for restricted clients) */}
                   {(isAdmin || isEmployee) && client.status === 'RESTRICTED' && (
                        <button
                           onClick={() => handleShowOrHideDebts(client.id)}
                           style={{ backgroundColor: 'purple', color: 'white' }}
                         >
-                          {visibleDebtsClientId === client.id ? 'Ocultar Deudas' : 'Ver Deudas'}
+                          {visibleDebtsClientId === client.id ? 'Hide Debts' : 'Show Debts'}
                         </button>
                   )}
                 </td>
               </tr>
-              {/* Fila Condicional para mostrar detalles de deuda */}
+              {/* Optional row with the debt details */}
               {visibleDebtsClientId === client.id && (
                 <tr className="debt-details-row">
-                  {/* Pasamos el clientId y el setMessage para que el subcomponente pueda actualizar mensajes */}
+                  {/* setMessage lets the child component show messages */}
                   <DebtDetails clientId={client.id} messageSetter={setMessage} />
                 </tr>
               )}

@@ -17,7 +17,7 @@ function TariffManager() {
   const loadTariffs = () => {
     TariffService.getTariff()
       .then(response => {
-        // Aseguramos que los valores sean números para el formulario
+        // numeric values for the form
         setTariffs({
           dailyRentFee: response.data.dailyRentFee || 0,
           dailyLateFee: response.data.dailyLateFee || 0,
@@ -27,7 +27,7 @@ function TariffManager() {
       })
       .catch(e => {
         console.error("Error fetching tariffs:", e);
-        setMessage("Error al cargar las tarifas.");
+        setMessage("Error loading the tariffs.");
       });
   };
 
@@ -47,25 +47,25 @@ function TariffManager() {
 
     TariffService.updateTariff(tariffs)
       .then(() => {
-        setMessage("Tarifas actualizadas correctamente.");
+        setMessage("Tariffs updated successfully.");
         loadTariffs();
       })
       .catch((e) => {
         console.error("Error updating tariffs:", e);
-        setMessage(`Error al actualizar: ${getErrorMessage(e)}`);
+        setMessage(`Error updating tariffs: ${getErrorMessage(e)}`);
       });
   };
 
   if (!isAdmin) {
-    return <h3 style={{padding:16}}>Acceso denegado. Solo Administradores pueden gestionar tarifas.</h3>;
+    return <h3 style={{padding:16}}>Access denied. Only administrators can manage tariffs.</h3>;
   }
 
   return (
     <div style={{padding: 16}}>
-      <h2>Gestión de Tarifas y Montos (ADMIN)</h2>
+      <h2>Tariffs and Fees</h2>
       <form onSubmit={handleSubmit}>
         <div>
-          <label>Tarifa Diaria de Arriendo: </label>
+          <label>Daily Rental Fee: </label>
           <input
             type="number"
             name="dailyRentFee"
@@ -75,7 +75,7 @@ function TariffManager() {
           />
         </div>
         <div>
-          <label>Tarifa Diaria de Multa por Atraso: </label>
+          <label>Daily Late Fee: </label>
           <input
             type="number"
             name="dailyLateFee"
@@ -85,7 +85,7 @@ function TariffManager() {
           />
         </div>
         <div>
-          <label>Cargo por Reparación Leve: </label>
+          <label>Light Damage Repair Fee: </label>
           <input
             type="number"
             name="repairFee"
@@ -94,7 +94,7 @@ function TariffManager() {
             required
           />
         </div>
-        <button type="submit" style={{marginTop: '15px'}}>Actualizar Tarifas</button>
+        <button type="submit" style={{marginTop: '15px'}}>Update Tariffs</button>
       </form>
       {message && <p style={{ color: message.startsWith("Error") ? 'red' : 'green' }}>{message}</p>}
     </div>

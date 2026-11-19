@@ -22,7 +22,7 @@ function RequireAuth({ children, roles }) {
 
   if (roles?.length) {
     const hasRole = roles.some((r) => keycloak.hasRealmRole(r));
-    if (!hasRole) return <h3 style={{padding:16}}>No autorizado</h3>;
+    if (!hasRole) return <h3 style={{padding:16}}>Not authorized</h3>;
   }
   return children;
 }
@@ -35,13 +35,13 @@ function Menu() {
 
   return (
     <nav style={{display:"flex",gap:12,padding:"8px 16px",borderBottom:"1px solid #eee"}}>
-      <Link to="/tools">Herramientas</Link>
-      {(isAdmin) && <Link to="/tools/add">Agregar herramienta</Link>}
-      <Link to="/loans">Préstamos</Link>
-      {(isAdmin) && <Link to="/clients">Clientes</Link>}
-      {(isAdmin) && <Link to="/tariffs">Tarifas</Link>}
-      {(isUser || isAdmin) && <Link to="/loans/add">Registrar préstamo</Link>}
-      {(isUser || isAdmin) && <Link to="/reports">Reportes</Link>} 
+      <Link to="/tools">Tools</Link>
+      {(isAdmin) && <Link to="/tools/add">Add tool</Link>}
+      <Link to="/loans">Loans</Link>
+      {(isAdmin) && <Link to="/clients">Clients</Link>}
+      {(isAdmin) && <Link to="/tariffs">Tariffs</Link>}
+      {(isUser || isAdmin) && <Link to="/loans/add">Register loan</Link>}
+      {(isUser || isAdmin) && <Link to="/reports">Reports</Link>}
       {(isAdmin) && <Link to="/kardex">Kardex</Link>}
     </nav>
   );
@@ -55,25 +55,25 @@ export default function App() {
       <Routes>
         <Route path="/" element={
           <div style={{ padding: 16 }}>
-            <h2>Bienvenido a ToolRent</h2>
+            <h2>Welcome to ToolRent</h2>
           </div>
         } />
-        {/* --- Rutas de Herramientas --- */}
+        {/* --- Tool routes --- */}
         <Route path="/tools" element={<RequireAuth><ToolList /></RequireAuth>} />
         <Route path="/tools/add" element={<RequireAuth roles={["ADMIN"]}><AddTool /></RequireAuth>} />
         <Route path="/tools/edit/:id" element={<RequireAuth roles={["ADMIN"]}><EditTool /></RequireAuth>} />
 
-        {/* --- Rutas de Préstamos --- */}
+        {/* --- Loan routes --- */}
         <Route path="/loans" element={<RequireAuth><LoanList /></RequireAuth>} />
         <Route path="/loans/add" element={<RequireAuth roles={["ADMIN","EMPLOYEE"]}><AddLoan /></RequireAuth>} />
         <Route path="/loans/return/:id" element={<RequireAuth roles={["ADMIN", "EMPLOYEE"]}><ReturnLoan /></RequireAuth>} />
 
-        {/* --- Rutas de Clientes --- */}
+        {/* --- Client routes --- */}
         <Route path="/clients" element={<RequireAuth roles={["ADMIN"]}><ClientList /></RequireAuth>} />
         <Route path="/clients/add" element={<RequireAuth roles={["ADMIN"]}><AddClient /></RequireAuth>} />
         <Route path="/clients/edit/:id" element={<RequireAuth roles={["ADMIN"]}><EditClient /></RequireAuth>} />
         
-        {/* --- Rutas de Tarifas, Reportes y Kardex--- */}
+        {/* --- Tariff, report and Kardex routes --- */}
         <Route path="/tariffs" element={<RequireAuth roles={["ADMIN"]}><TariffManager /></RequireAuth>} />
         <Route path="/reports" element={<RequireAuth roles={["EMPLOYEE","ADMIN"]}><ReportViewer /></RequireAuth>} />
         <Route path="/kardex" element={<RequireAuth roles={["ADMIN"]}><KardexViewer /></RequireAuth>} />
@@ -81,8 +81,8 @@ export default function App() {
         {/* fallback */}
         <Route path="*" element={
             <div style={{ padding: 16 }}>
-                <h2>Página no encontrada</h2>
-                <Link to="/">Volver al inicio</Link>
+                <h2>Page not found</h2>
+                <Link to="/">Back to home</Link>
             </div>
         } />
       </Routes>

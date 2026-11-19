@@ -1,34 +1,34 @@
 import http from "../http-common";
 
 class ToolService {
-  // --- METODO GET ALL ---
+  // --- Get all ---
   getAll() {
     return http.get("/tools");
   }
 
-  // --- MÉTODO GET ONE ---
+  // --- Get one ---
   get(id) {
     return http.get(`/tools/${id}`);
   }
 
-  // --- MÉTODO CREATE ---
+  // --- Create ---
   create(data) {
     return http.post("/tools", data);
   }
 
-  // --- MÉTODO UPDATE ---
+  // --- Update ---
   update(id, data) {
-    // data debe contener name, category, replacementValue
+    // data: { name, category, replacementValue }
     return http.put(`/tools/${id}`, data);
   }
 
-  // --- MÉTODO ADJUST STOCK ---
+  // --- Adjust stock ---
   adjustStock(id, data) {
-      // data debe ser { quantityChange: number }
+      // data: { quantityChange: number }
       return http.patch(`/tools/${id}/stock`, data);
   }
 
-  // --- MÉTODO DECOMMISSION ---
+  // --- Decommission ---
   decommission(id) {
     return http.put(`/tools/${id}/decommission`);
   }

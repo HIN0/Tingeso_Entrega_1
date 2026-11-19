@@ -10,12 +10,12 @@ function EditTool() {
     name: "",
     category: "",
     replacementValue: 0,
-    // Stock y Status no se editan aquí directamente
+    // stock and status are not edited here
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Cargar datos de la herramienta al montar el componente
+  // Load the tool on mount
   useEffect(() => {
     ToolService.get(id)
       .then(response => {
@@ -46,9 +46,9 @@ function EditTool() {
         return;
     }
 
-    ToolService.update(id, tool) // Llama al método update del servicio
+    ToolService.update(id, tool)
       .then(() => {
-        navigate("/tools"); // Volver a la lista después de guardar
+        navigate("/tools"); // back to the list
       })
       .catch((err) => {
         console.error("Error updating tool:", err);

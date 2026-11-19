@@ -7,7 +7,7 @@ export default function Header() {
   const isAuth = !!keycloak?.authenticated;
   const token = isAuth ? keycloak.tokenParsed : null;
 
-  const username = token?.preferred_username ?? "Invitado";
+  const username = token?.preferred_username ?? "Guest";
   const email = token?.email ?? "—";
   const givenName = token?.given_name ?? "";
   const familyName = token?.family_name ?? "";
@@ -23,9 +23,9 @@ export default function Header() {
             <span>{givenName || familyName ? `${givenName} ${familyName}`.trim() : username}</span>
             <span style={{opacity:0.7}}>{email}</span>
             <span style={{padding:"2px 10px",border:"1px solid #9ca3af",borderRadius:999}}>
-              {isAdmin ? "Admin" : "Empleado"}
+              {isAdmin ? "Admin" : "Employee"}
             </span>
-            <button onClick={() => keycloak.accountManagement()}>Mi cuenta</button>
+            <button onClick={() => keycloak.accountManagement()}>My account</button>
             <button onClick={() => keycloak.logout({ redirectUri: window.location.origin })}>Logout</button>
           </>
         )}

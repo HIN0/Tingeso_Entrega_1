@@ -18,29 +18,29 @@ function LoanList() {
           setLoans(response.data);
         } else {
           console.error("Error: API did not return an array for loans", response.data);
-          setLoans([]); // Poner un array vacío en caso de error
+          setLoans([]); // empty list on error
         }
       })
       .catch(e => {
           console.error("Error fetching loans:", e);
-          setLoans([]); // Poner un array vacío en caso de error de red
+          setLoans([]); // empty list on network error
       });
   };
 
   useEffect(() => {
-    // Solo cargar si está autenticado
+    // Load only when authenticated
     if(isAuth) {
       loadLoans();
     }
   }, [isAuth]);
 
-  // --- Renderizado ---
+  // --- Render ---
   return (
-    <div style={{ padding: 16 }}> {/* Añadir padding */}
+    <div style={{ padding: 16 }}>
       <h2>Loans</h2>
       {(isAdmin || isUser) && <Link to="/loans/add" style={{ marginBottom: '15px', display: 'inline-block' }}>➕ Add Loan</Link>}
       
-      {/* Tabla para mejor visualización */}
+      {/* Loans table */}
       <table border="1" style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead>
           <tr>
@@ -54,7 +54,7 @@ function LoanList() {
           </tr>
         </thead>
         <tbody>
-          {/* Asegurarse que 'loans' es un array antes de mapear */}
+          {/* 'loans' must be an array before mapping */}
           {Array.isArray(loans) && loans.map(loan => (
             <tr key={loan.id}>
               <td>{loan.id}</td>
@@ -66,7 +66,7 @@ function LoanList() {
                 {loan.status}
               </td>
               <td>
-                {/* Mostrar si (es Admin O Empleado) Y (estado es ACTIVE O LATE) */}
+                {/* Return link: admin or employee, only for ACTIVE or LATE loans */}
                 {(isAdmin || isUser) && (loan.status === "ACTIVE" || loan.status === "LATE") && (
                   <Link to={`/loans/return/${loan.id}`}>Return</Link>
                 )}
@@ -75,7 +75,7 @@ function LoanList() {
           ))}
         </tbody>
       </table>
-      {/* Mostrar si el array está vacío o no es un array */}
+      {/* Empty state */}
       {(!Array.isArray(loans) || loans.length === 0) && (
           <p style={{ marginTop: '15px' }}>No loans (Active or Late) found.</p>
       )}

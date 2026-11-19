@@ -1,29 +1,29 @@
 import http from "../http-common";
 
 class ReportService {
-  // RF6.1: Modificado para enviar fechas si existen
+  // RF6.1: loans by status, optional date range
   getLoansByStatus(status, from, to) {
     let url = `/reports/loans?status=${status}`;
-    // Añadir parámetros de fecha solo si ambos están presentes
+    // add the date range only when both dates are present
     if (from && to) {
       url += `&from=${from}&to=${to}`;
     }
     return http.get(url);
   }
 
-  // RF6.2: Modificado para enviar fechas si existen
+  // RF6.2: clients with late loans, optional date range
   getClientsWithLateLoans(from, to) {
     let url = "/reports/clients/late";
-    // Añadir parámetros de fecha solo si ambos están presentes
+    // add the date range only when both dates are present
     if (from && to) {
-      url += `?from=${from}&to=${to}`; // O usar '&' si ya hubiera otros params
+      url += `?from=${from}&to=${to}`;
     }
     return http.get(url);
   }
 
-  // RF6.3: Sin cambios, ya enviaba fechas
+  // RF6.3: most loaned tools (date range required)
   getTopTools(from, to) {
-    // Validar fechas aquí o asumir que el componente lo hace
+    // the ranking always needs both dates
     if (!from || !to) {
         return Promise.reject(new Error("Both 'from' and 'to' dates are required for Top Tools report."));
     }

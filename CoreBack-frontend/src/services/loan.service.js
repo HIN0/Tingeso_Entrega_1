@@ -2,7 +2,7 @@ import http from "../http-common";
 
 class LoanService {
   getAll() {
-    // Ajustado para coincidir con el backend (devuelve activos + atrasados)
+    // open loans (ACTIVE + LATE)
     return http.get("/loans");
   }
 

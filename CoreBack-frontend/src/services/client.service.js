@@ -5,19 +5,19 @@ class ClientService {
     return http.get("/clients");
   }
 
-  // --- OBTENER CLIENTE POR ID ---
+  // --- Get client by ID ---
   get(id) {
     return http.get(`/clients/${id}`);
   }
 
   create(data) {
-    // data debe incluir name, rut, phone, email
+    // data: { name, rut, phone, email }
     return http.post("/clients", data);
   }
 
-  // --- ACTUALIZAR DATOS CLIENTE ---
+  // --- Update client data ---
   update(id, data) {
-    // data debe incluir name, phone, email
+    // data: { name, phone, email }
     return http.put(`/clients/${id}`, data);
   }
 
@@ -25,11 +25,10 @@ class ClientService {
     return http.patch(`/clients/${id}/status`, { status: status });
   }
 
-  // --- NUEVA FUNCIÓN PARA INTENTAR ACTIVAR ---
+  // --- Reactivate (validated by the backend) ---
   attemptReactivation(id) {
-    // Llama al nuevo endpoint del backend
+    // returns the client with its final status
     return http.patch(`/clients/${id}/activate`);
-    // Espera recibir ClientEntity como respuesta
   }
 }
 

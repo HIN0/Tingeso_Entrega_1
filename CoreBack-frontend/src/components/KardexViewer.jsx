@@ -3,7 +3,7 @@ import KardexService from "../services/kardex.service";
 import { getErrorMessage } from "../utils/apiError";
 
 function KardexViewer() {
-  const [queryType, setQueryType] = useState("tool"); // 'tool' o 'date'
+  const [queryType, setQueryType] = useState("tool"); // 'tool' or 'date'
   const [toolId, setToolId] = useState("");
   const [dateRange, setDateRange] = useState({ start: "", end: "" });
   const [kardexData, setKardexData] = useState([]);
@@ -38,14 +38,14 @@ function KardexViewer() {
       });
   };
 
-  // Formatear fecha/hora para mostrarla
+  // Format date/time for display
   const formatDateTime = (dateTimeString) => {
       if (!dateTimeString) return '-';
       try {
           const date = new Date(dateTimeString);
-          return date.toLocaleString(); // Formato local (ej. 21/10/2025, 10:30:00)
+          return date.toLocaleString(); // local format (e.g. 21/10/2025, 10:30:00)
       } catch {
-          return dateTimeString; // Devolver original si hay error
+          return dateTimeString; // keep the original text if it cannot be parsed
       }
   };
 
@@ -53,7 +53,7 @@ function KardexViewer() {
   return (
     <div style={{ padding: 16 }}>
       <h2>Kardex Viewer</h2>
-      {/* Selector de tipo de consulta */}
+      {/* Query type selector */}
       <div>
         <label>
           <input
@@ -77,7 +77,7 @@ function KardexViewer() {
         </label>
       </div>
 
-      {/* Inputs condicionales */}
+      {/* Inputs of the selected query */}
       <div style={{ margin: '15px 0' }}>
         {queryType === "tool" && (
           <div>
@@ -108,12 +108,12 @@ function KardexViewer() {
         )}
       </div>
 
-      {/* Botón de búsqueda */}
+      {/* Search button */}
       <button onClick={handleFetchKardex} disabled={loading}>
         {loading ? "Loading..." : "Fetch Kardex Movements"}
       </button>
 
-      {/* Mensajes y Tabla de Resultados */}
+      {/* Messages and results table */}
       {message && <p style={{ color: message.startsWith("Error") ? 'red' : 'green', marginTop: '15px' }}>{message}</p>}
 
       {kardexData.length > 0 && (

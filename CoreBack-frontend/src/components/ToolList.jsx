@@ -4,9 +4,9 @@ import ToolService from "../services/tool.service";
 import { Link } from "react-router-dom";
 import { getErrorMessage } from "../utils/apiError";
 
-// --- FUNCIÓN DE CLASIFICACIÓN AVANZADA ---
+// --- Sort order of the inventory table ---
 const sortTools = (a, b) => {
-    // Definimos el orden para los estados ACTIVOS/EN REPARACIÓN
+    // Order of the non-decommissioned statuses
     const statusOrder = {
         'AVAILABLE': 1,
         'REPAIRING': 2,
@@ -16,26 +16,26 @@ const sortTools = (a, b) => {
     const orderA = statusOrder[a.status] || 99;
     const orderB = statusOrder[b.status] || 99;
 
-    // Clasificar por el orden definido
+    // by status order
     if (orderA !== orderB) {
         return orderA - orderB;
     }
 
-    // Desempate: Ordenar por ID ascendente 
+    // tie-break: ascending ID
     return a.id - b.id;
 };
 // ------------------------------------------
 
 function ToolList() {
-  const [activeTools, setActiveTools] = useState([]); // Nueva lista para herramientas activas
-  const [decommissionedTools, setDecommissionedTools] = useState([]); // Nueva lista para herramientas de baja
+  const [activeTools, setActiveTools] = useState([]); // not decommissioned
+  const [decommissionedTools, setDecommissionedTools] = useState([]); // decommissioned
   
   const { keycloak } = useKeycloak();
   const isAuth = !!keycloak?.authenticated;
   const isAdmin = isAuth && keycloak.hasRealmRole("ADMIN");
   const [error, setError] = useState('');
 
-  // --- ESTADO PARA EL AJUSTE INLINE (Se mantiene la lógica) ---
+  // --- Inline stock adjustment state ---
   const [adjustment, setAdjustment] = useState({
       id: null,
       quantity: 1,
@@ -49,15 +49,15 @@ function ToolList() {
       .then(response => {
           const allTools = response.data;
           
-          // 1. Filtrar las herramientas
+          // 1. Split active and decommissioned tools
           const decommissioned = allTools.filter(t => t.status === 'DECOMMISSIONED');
           const active = allTools.filter(t => t.status !== 'DECOMMISSIONED');
           
-          // 2. Ordenar las herramientas activas con la lógica compleja
+          // 2. Sort the active ones
           const sortedActive = active.sort(sortTools);
           
           setActiveTools(sortedActive);
-          // Las herramientas de baja se ordenan solo por ID (el filtro de React no requiere .sort() extra)
+          // decommissioned tools sorted by ID
           setDecommissionedTools(decommissioned.sort((a, b) => a.id - b.id)); 
           
       })
@@ -71,7 +71,7 @@ function ToolList() {
     loadTools();
   }, []);
 
-  // --- Funciones de Stock y Decommission se mantienen sin cambios ---
+  // --- Decommission and stock adjustment ---
   const handleDecommission = (id) => {
     setError('');
     if (window.confirm("Are you sure you want to decommission this tool? This action cannot be undone.")) {
@@ -148,11 +148,11 @@ function ToolList() {
       {error && <p style={{ color: 'red' }}>{error}</p>}
 
       {/* ========================================================================================================
-          TABLA 1: INVENTARIO ACTIVO (AVAILABLE, REPAIRING) 
+          TABLE 1: ACTIVE INVENTORY (every status except DECOMMISSIONED)
           ======================================================================================================== */}
       <table border="1" style={{ width: '95%', marginTop: '15px',marginLeft: 'auto', marginRight: 'auto', borderCollapse: 'collapse'}}>
         
-        {/* --- COLGROUP DE 9 COLUMNAS (TABLA 1) --- */}
+        {/* --- 9 columns (table 1) --- */}
         <colgroup>
             <col style={{ width: '4%' }} />    {/* 1. ID */}
             <col style={{ width: '17%' }} />   {/* 2. Name */}
@@ -165,7 +165,7 @@ function ToolList() {
             <col style={{ width: '33%' }} />   {/* 9. Actions */}
         </colgroup>
         
-      {/* --- NUEVA FILA DE TÍTULO VERDE --- */}
+      {/* --- Green title row --- */}
         <thead>
           <tr>
             <th colSpan="9" style={{ backgroundColor: '#65e10cff', color: 'white', textAlign: 'center', padding: '8px' }}>
@@ -201,7 +201,7 @@ function ToolList() {
                 <td>
                   <Link to={`/tools/edit/${tool.id}`} style={{ marginRight: '5px' }}>Edit</Link>
 
-                  {/* LÓGICA CONDICIONAL DE AJUSTE */}
+                  {/* Inline stock adjustment */}
                   {adjustment.id === tool.id ? (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
                           <input
@@ -243,7 +243,6 @@ function ToolList() {
                       </>
                   )}
 
-                  {/* Lógica de Decommission */}
                   {/* Repair evaluation: only when there are damaged units waiting */}
                   {tool.inRepair > 0 && (
                     <>
@@ -280,11 +279,11 @@ function ToolList() {
       <h1></h1>
 
       {/* ========================================================================================================
-        TABLA 2: INVENTARIO DE BAJA (DECOMMISSIONED) - Se eliminan Status, Stock, In Repair, y Actions
+        TABLE 2: DECOMMISSIONED TOOLS (no status, stock or actions)
         ======================================================================================================== */}
       <table border="1" style={{ width: '95%', marginTop: '15px',marginLeft: 'auto', marginRight: 'auto', borderCollapse: 'collapse' }}>
         
-        {/* --- COLGROUP DE 8 COLUMNAS (TABLA 2: REPLICAR ESTRUCTURA) --- */}
+        {/* --- 4 columns (table 2) --- */}
         <colgroup>
             <col style={{ width: '5%' }} />    {/* 1. ID */}
             <col style={{ width: '20%' }} />   {/* 2. Name */}
@@ -292,7 +291,7 @@ function ToolList() {
             <col style={{ width: '30%' }} />   {/* 7. Repl. Value */}
         </colgroup>
         
-        {/* --- NUEVA FILA DE TÍTULO ROJO --- */}
+        {/* --- Red title row --- */}
         <thead>
           <tr>
             <th colSpan="4" style={{ backgroundColor: '#cc0000', color: 'white', textAlign: 'center', padding: '8px' }}>

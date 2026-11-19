@@ -19,7 +19,7 @@ function AddClient() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    setMessage("Guardando cliente...");
+    setMessage("Saving client...");
 
     ClientService.create(client)
       .then(() => {
@@ -27,16 +27,16 @@ function AddClient() {
       })
       .catch((error) => {
         console.error("Error creating client:", error);
-        setMessage(`Error al crear cliente: ${getErrorMessage(error)}`);
+        setMessage(`Error creating client: ${getErrorMessage(error)}`);
       });
   };
 
   return (
     <div style={{padding: 16}}>
-      <h2>Registrar Nuevo Cliente (ADMIN)</h2>
+      <h2>Register New Client</h2>
       <form onSubmit={handleSubmit}>
         <div>
-          <label>Nombre: </label>
+          <label>Name: </label>
           <input
             type="text"
             name="name"
@@ -56,7 +56,7 @@ function AddClient() {
           />
         </div>
         <div>
-          <label>Teléfono: </label>
+          <label>Phone: </label>
           <input
             type="text"
             name="phone"
@@ -75,7 +75,7 @@ function AddClient() {
             required
           />
         </div>
-        <button type="submit" style={{marginTop: '15px'}}>Guardar Cliente</button>
+        <button type="submit" style={{marginTop: '15px'}}>Save Client</button>
       </form>
       {message && <p style={{ color: message.startsWith("Error") ? 'red' : 'green' }}>{message}</p>}
     </div>

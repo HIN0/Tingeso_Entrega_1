@@ -29,7 +29,7 @@ function AddTool() {
         setError("Stock and Replacement Value cannot be negative.");
         return;
     }
-     if (tool.replacementValue < 1000) { // Validacion Min(1000) del backend
+     if (tool.replacementValue < 1000) { // same rule as the backend (@Min(1000))
         setError("Replacement Value must be at least 1000.");
         return;
     }
@@ -48,14 +48,14 @@ function AddTool() {
   return (
     <div style={{ padding: 16 }}>
       <h2>Add Tool</h2>
-      {/* Renderizado mejorado para mostrar los errores con saltos de línea */}
+      {/* Error message, keeping line breaks */}
       {error && (
         <div style={{ color: 'red', whiteSpace: 'pre-wrap', border: '1px solid red', padding: '10px', marginBottom: '15px' }}>
           <strong>Error:</strong><br/>{error}
         </div>
       )}
       <form onSubmit={handleSubmit}>
-        {/* ... Inputs para name, category ... */}
+        {/* Form fields */}
          <div>
           <label>Name: </label>
           <input
@@ -86,7 +86,7 @@ function AddTool() {
             value={tool.stock}
             onChange={handleChange}
             required
-            min="0" // Permitir 0 pero validar >= 0 en handleSubmit o backend
+            min="0" // 0 allowed (a tool can be registered before receiving stock)
           />
         </div>
 
@@ -98,7 +98,7 @@ function AddTool() {
             value={tool.replacementValue}
             onChange={handleChange}
             required
-            min="1000" // Mantener la validación del backend
+            min="1000" // same rule as the backend
           />
         </div>
 

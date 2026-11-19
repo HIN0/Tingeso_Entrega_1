@@ -4,33 +4,33 @@ import { useNavigate, useParams } from "react-router-dom";
 import { getErrorMessage } from "../utils/apiError";
 
 function EditClient() {
-  const { id } = useParams(); // Obtener ID de la URL
+  const { id } = useParams(); // client ID from the URL
   const navigate = useNavigate();
   const [client, setClient] = useState({
     name: "",
-    rut: "", // Mostrar RUT pero no permitir editarlo
+    rut: "", // shown but not editable
     phone: "",
     email: ""
   });
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
-  // Cargar datos del cliente al inicio
+  // Load the client on mount
   useEffect(() => {
     ClientService.get(id)
       .then(response => {
-        setClient(response.data); // Carga todos los datos, incluyendo RUT
+        setClient(response.data); // includes the (read-only) RUT
         setLoading(false);
       })
       .catch(error => {
         console.error("Error fetching client:", error);
-        setMessage("Error al cargar los datos del cliente.");
+        setMessage("Error loading the client.");
         setLoading(false);
       });
   }, [id]);
 
   const handleChange = (e) => {
-    // No permitir cambiar el RUT
+    // The RUT cannot be changed
     if (e.target.name !== "rut") {
         setClient({ ...client, [e.target.name]: e.target.value });
     }
@@ -38,9 +38,9 @@ function EditClient() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    setMessage("Actualizando cliente...");
+    setMessage("Updating client...");
 
-    // Enviar solo los campos editables
+    // Send only the editable fields
     const updateData = {
         name: client.name,
         phone: client.phone,
@@ -49,24 +49,24 @@ function EditClient() {
 
     ClientService.update(id, updateData)
       .then(() => {
-        navigate("/clients"); // Volver a la lista
+        navigate("/clients"); // back to the list
       })
       .catch((error) => {
         console.error("Error updating client:", error);
-        setMessage(`Error al actualizar cliente: ${getErrorMessage(error)}`);
+        setMessage(`Error updating client: ${getErrorMessage(error)}`);
       });
   };
 
   if (loading) {
-    return <p style={{ padding: 16 }}>Cargando...</p>;
+    return <p style={{ padding: 16 }}>Loading...</p>;
   }
 
   return (
     <div style={{ padding: 16 }}>
-      <h2>Editar Cliente (ID: {id})</h2>
+      <h2>Edit Client (ID: {id})</h2>
       <form onSubmit={handleSubmit}>
         <div>
-          <label>Nombre: </label>
+          <label>Name: </label>
           <input
             type="text"
             name="name"
@@ -83,12 +83,12 @@ function EditClient() {
             value={client.rut}
             onChange={handleChange}
             required
-            readOnly // Hacer el campo de solo lectura
-            style={{ backgroundColor: '#eee' }} // Estilo visual para indicar no editable
+            readOnly // read-only
+            style={{ backgroundColor: '#eee' }} // greyed out: not editable
           />
         </div>
         <div>
-          <label>Teléfono: </label>
+          <label>Phone: </label>
           <input
             type="text"
             name="phone"
@@ -107,7 +107,7 @@ function EditClient() {
             required
           />
         </div>
-        <button type="submit" style={{ marginTop: '15px' }}>Guardar Cambios</button>
+        <button type="submit" style={{ marginTop: '15px' }}>Save Changes</button>
       </form>
       {message && <p style={{ color: message.startsWith("Error") ? 'red' : 'green' }}>{message}</p>}
     </div>

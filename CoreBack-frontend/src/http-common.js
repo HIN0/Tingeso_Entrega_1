@@ -10,19 +10,19 @@ const apiClient = axios.create({
   },
 });
 
-// Interceptor de Solicitudes: Adjuntar el token JWT
+// Request interceptor: attach the Keycloak JWT
 apiClient.interceptors.request.use(async (config) => {
-  // 1. Asegurar que Keycloak esté inicializado y autenticado
+  // 1. Only when the user is authenticated
   if (keycloak.authenticated) {
-    // 2. Intentar actualizar el token si está por expirar
+    // 2. Refresh the token if it is about to expire
     try {
-      await keycloak.updateToken(5); // Forzar refresh si expira en 5 segundos
+      await keycloak.updateToken(5); // refresh if it expires within 5 seconds
       
-      // 3. Adjuntar el nuevo token
+      // 3. Attach the (possibly refreshed) token
       config.headers.Authorization = `Bearer ${keycloak.token}`;
     } catch (error) {
-      console.error('Error al actualizar o adjuntar el token de Keycloak:', error);
-      // Opcional: Redirigir a login si falla el refresh
+      console.error('Error refreshing the Keycloak token:', error);
+      // Optional: redirect to login if the refresh fails
       // keycloak.logout(); 
     }
   }

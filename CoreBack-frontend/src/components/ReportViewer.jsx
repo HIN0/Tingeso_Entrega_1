@@ -4,38 +4,38 @@ import { useKeycloak } from "@react-keycloak/web";
 import { getErrorMessage } from "../utils/apiError";
 
 function ReportViewer() {
-  const [reportType, setReportType] = useState("LATE_CLIENTS"); // Tipo de reporte activo
-  const [reportData, setReportData] = useState([]); // Datos del reporte
+  const [reportType, setReportType] = useState("LATE_CLIENTS"); // selected report
+  const [reportData, setReportData] = useState([]); // report rows
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(""); 
 
-  // Estado unificado para el rango de fechas
+  // Date range used by the filters
   const [dateRange, setDateRange] = useState({ from: "", to: "" });
-  // Estado para controlar si el filtro de fecha está activo
+  // Whether the date filter is enabled
   const [useDateFilter, setUseDateFilter] = useState(false);
 
   const { keycloak } = useKeycloak();
   const isAdminOrUser = keycloak?.authenticated && (keycloak.hasRealmRole("ADMIN") || keycloak.hasRealmRole("EMPLOYEE"));
 
-  // Función para cargar reportes, ahora usa las fechas si están activas
+  // Loads a report, applying the date range when the filter is enabled
   const loadReport = (type, filterDates) => {
     if (!isAdminOrUser) return;
     setLoading(true);
     setReportData([]);
-    setMessage(""); // Limpiar mensajes
+    setMessage(""); // clear messages
 
-    // Determinar qué fechas pasar al servicio
+    // Dates sent to the service (null = no filter)
     const fromDate = filterDates && dateRange.from ? dateRange.from : null;
     const toDate = filterDates && dateRange.to ? dateRange.to : null;
 
-    // Validar que si se usan fechas, estén ambas presentes (excepto para Top Tools donde es obligatorio)
+    // With the filter enabled both dates are required (Top Tools always requires them)
     if (filterDates && type !== "TOP_TOOLS" && (!fromDate || !toDate)) {
         setMessage("Error: Both start and end dates are required when date filter is active.");
         setLoading(false);
         return;
     }
     if (type === "TOP_TOOLS" && (!fromDate || !toDate)) {
-        // Ya validado en el servicio, pero podemos añadir mensaje aquí
+        // also validated by the backend; show a clear message here
         setMessage("Error: Date range is mandatory for Top Tools report.");
         setLoading(false);
         return;
@@ -46,24 +46,24 @@ function ReportViewer() {
     switch (type) {
       case "ACTIVE_LOANS":
       case "LATE_LOANS":
-        // Llamar al servicio con las fechas (pueden ser null)
+        // dates may be null (no filter)
         promise = ReportService.getLoansByStatus(type.replace('_LOANS', ''), fromDate, toDate);
         break;
       case "LATE_CLIENTS":
-         // Llamar al servicio con las fechas (pueden ser null)
+         // dates may be null (no filter)
         promise = ReportService.getClientsWithLateLoans(fromDate, toDate);
         break;
       case "TOP_TOOLS":
-         // Las fechas son obligatorias aquí y ya se validaron
+         // dates are mandatory here and were validated above
         promise = ReportService.getTopTools(fromDate, toDate);
         break;
       default:
         setMessage("Error: Invalid report type selected.");
         setLoading(false);
-        return; // Salir si el tipo no es válido
+        return; // unknown report type
     }
 
-    // Procesar la promesa
+    // Handle the response
     promise
       .then(response => {
         setReportData(response.data);
@@ -78,26 +78,26 @@ function ReportViewer() {
       .finally(() => setLoading(false));
   };
 
-  // Cargar reporte inicial (sin filtro de fecha)
+  // Initial report (no date filter)
   useEffect(() => {
-    loadReport(reportType, false); // Carga inicial sin filtro
+    loadReport(reportType, false); // initial load, no date filter
     // Intentional: run only on first render / role change, not on every reportType change
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isAdminOrUser]); // Solo se ejecuta si cambia el estado de autenticación/rol
+  }, [isAdminOrUser]); // only when the role changes
 
-  // Manejador para cambiar de reporte y ejecutarlo
+  // Select a report and run it
   const handleRunReport = (type) => {
-    setReportType(type); // Actualiza el tipo de reporte
-    // Ejecuta la carga usando el estado actual de useDateFilter
+    setReportType(type);
+    // uses the current date filter state
     loadReport(type, useDateFilter);
   };
 
-  // Renderizado de datos (sin cambios)
+  // Report table
   const renderData = () => {
-    // ... (igual que antes)
+    // Renders the table of the selected report
     if (loading) return <p>Loading data...</p>;
-    if (message && reportData.length === 0) return <p>{message}</p>; // Mostrar mensaje si no hay datos
-    if (reportData.length === 0) return <p>Click a report button to view data.</p>; // Mensaje inicial o si no hay datos
+    if (message && reportData.length === 0) return <p>{message}</p>; // no data: show the message
+    if (reportData.length === 0) return <p>Click a report button to view data.</p>; // initial state
 
 
     switch (reportType) {
@@ -105,7 +105,7 @@ function ReportViewer() {
       case "LATE_LOANS":
         return (
           <table>
-            <thead><tr><th>ID</th><th>Cliente</th><th>Herramienta</th><th>Inicio</th><th>Vencimiento</th><th>Estado</th></tr></thead>
+            <thead><tr><th>ID</th><th>Client</th><th>Tool</th><th>Start</th><th>Due</th><th>Status</th></tr></thead>
             <tbody>
               {reportData.map(loan => (
                 <tr key={loan.id}>
@@ -123,7 +123,7 @@ function ReportViewer() {
       case "LATE_CLIENTS":
          return (
           <table>
-            <thead><tr><th>ID</th><th>RUT</th><th>Nombre</th><th>Email</th><th>Estado</th></tr></thead>
+            <thead><tr><th>ID</th><th>RUT</th><th>Name</th><th>Email</th><th>Status</th></tr></thead>
             <tbody>
               {reportData.map(client => (
                 <tr key={client.id}>
@@ -140,14 +140,14 @@ function ReportViewer() {
       case "TOP_TOOLS":
         return (
           <table>
-            <thead><tr><th>Ranking</th><th>Herramienta</th><th>Total Préstamos</th></tr></thead>
+            <thead><tr><th>Rank</th><th>Tool</th><th>Total Loans</th></tr></thead>
             <tbody>
-              {/* El backend devuelve Object[] con ToolEntity y Count */}
+              {/* The backend returns [tool, count] pairs */}
               {reportData.map((item, index) => (
-                <tr key={item[0]?.id || index}> {/* Usar ID de herramienta si existe como key */}
+                <tr key={item[0]?.id || index}> {/* tool ID as key */}
                   <td>{index + 1}</td>
                   <td>{item[0]?.name}</td>
-                  <td>{item[1]}</td> {/* Asumiendo que item[1] es el count */}
+                  <td>{item[1]}</td> {/* count */}
                 </tr>
               ))}
             </tbody>
@@ -161,9 +161,9 @@ function ReportViewer() {
 
   return (
     <div style={{ padding: 16 }}>
-      <h2>Reportes del Sistema (Épica 6)</h2>
+      <h2>Reports</h2>
 
-      {/* --- Controles de Filtro de Fecha --- */}
+      {/* --- Date filter --- */}
       <div style={{ marginBottom: '20px', border: '1px solid #ccc', padding: '10px' }}>
         <h4>Date Filter (Optional for Loans/Clients, Required for Top Tools)</h4>
         <label>
@@ -180,45 +180,45 @@ function ReportViewer() {
             type="date"
             value={dateRange.from}
             onChange={e => setDateRange({ ...dateRange, from: e.target.value })}
-            disabled={!useDateFilter} // Deshabilitar si el checkbox no está marcado
+            disabled={!useDateFilter} // enabled only with the filter
           />
           <label>To:</label>
           <input
             type="date"
             value={dateRange.to}
             onChange={e => setDateRange({ ...dateRange, to: e.target.value })}
-            disabled={!useDateFilter} // Deshabilitar si el checkbox no está marcado
+            disabled={!useDateFilter} // enabled only with the filter
           />
         </div>
       </div>
 
 
-      {/* --- Botones de Reporte --- */}
+      {/* --- Report buttons --- */}
       <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
         <button onClick={() => handleRunReport("LATE_CLIENTS")} disabled={loading}>
-          Clientes Atrasados (RF6.2) {useDateFilter ? '(Filtered)' : ''}
+          Clients with Late Loans (RF6.2) {useDateFilter ? '(Filtered)' : ''}
         </button>
         <button onClick={() => handleRunReport("ACTIVE_LOANS")} disabled={loading}>
-          Préstamos Activos (RF6.1) {useDateFilter ? '(Filtered)' : ''}
+          Active Loans (RF6.1) {useDateFilter ? '(Filtered)' : ''}
         </button>
         <button onClick={() => handleRunReport("LATE_LOANS")} disabled={loading}>
-          Préstamos Atrasados (RF6.1) {useDateFilter ? '(Filtered)' : ''}
+          Late Loans (RF6.1) {useDateFilter ? '(Filtered)' : ''}
         </button>
-        {/* Botón Ranking siempre usa filtro si está activo, o es requerido */}
+        {/* The ranking always needs a date range */}
         <button
            onClick={() => handleRunReport("TOP_TOOLS")}
-           // Deshabilitar si está cargando O si el filtro está activo pero faltan fechas
+           // disabled while loading or when dates are missing
            disabled={loading || (useDateFilter && (!dateRange.from || !dateRange.to))}
            title={!useDateFilter ? "Enable date filter to run Top Tools report" : ""} // Tooltip
         >
-          Ranking Herramientas (RF6.3) {useDateFilter ? '(Filtered)' : '(Date Range Required)'}
+          Most Loaned Tools (RF6.3) {useDateFilter ? '(Filtered)' : '(Date Range Required)'}
         </button>
          {!useDateFilter && <span style={{fontSize: '0.9em', color: 'orange'}}>(Enable Date Filter for Top Tools)</span>}
          {useDateFilter && (!dateRange.from || !dateRange.to) && <span style={{fontSize: '0.9em', color: 'red'}}>(Select From/To Dates)</span>}
 
       </div>
 
-      {/* --- Visor de Datos --- */}
+      {/* --- Results --- */}
       <div style={{ marginTop: '20px', textAlign: 'left' }}>
         <h3>
           Results: {reportType.replace('_', ' ')}
