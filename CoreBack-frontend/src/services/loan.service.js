@@ -25,18 +25,6 @@ class LoanService {
   getUnpaidLoansByClient(clientId) {
     return http.get(`/loans/client/${clientId}/unpaid`);
   }
-
-  getActiveLoans() {
-    return http.get("/loans/active");
-  }
-
-  getLateLoans() {
-      return http.get("/loans/late");
-  }
-
-  getUnpaidClosedLoans() {
-      return http.get("/loans/closed/unpaid");
-  }
 }
 
 export default new LoanService();

@@ -36,7 +36,6 @@ public class LoanService {
                        ClientRepository clientRepository,
                        ToolRepository toolRepository,
                        ToolService toolService,
-                       KardexService kardexService,
                        TariffService tariffService,
                        ClientService clientService) {
         this.loanRepository = loanRepository;
@@ -50,12 +49,6 @@ public class LoanService {
     // ########################################################################################################################################################
     // ####################################################### MÉTODOS DE PRÉSTAMO ############################################################################
     // ########################################################################################################################################################
-    // METODO ENVOLVENTE PARA CREAR PRÉSTAMO CON FECHA DE INICIO HOY
-    @Transactional
-    public LoanEntity createLoan(Long clientId, Long toolId, LocalDate dueDate, UserEntity user) {
-        return createLoan(clientId, toolId, LocalDate.now(), dueDate, user);
-    }
-
     // MÉTODO PRINCIPAL PARA CREAR PRÉSTAMO
     @Transactional
     public LoanEntity createLoan(Long clientId, Long toolId, LocalDate startDate, LocalDate dueDate, UserEntity user) {
@@ -139,12 +132,6 @@ public class LoanService {
     // ########################################################################################################################################################
     // ####################################################### MÉTODOS DE DEVOLUCION ##########################################################################
     // ########################################################################################################################################################
-    // MÉTODO ENVOLVENTE PARA DEVOLVER PRÉSTAMO CON FECHA DE DEVOLUCIÓN HOY
-    @Transactional
-    public LoanEntity returnLoan(Long loanId, Long toolId, boolean damaged, boolean irreparable, UserEntity user) {
-        return returnLoan(loanId, toolId, damaged, irreparable, user, LocalDate.now());
-    }
-
     // MÉTODO PRINCIPAL PARA DEVOLVER PRÉSTAMO
     @Transactional
     public LoanEntity returnLoan(Long loanId, Long toolId, boolean damaged, boolean irreparable, UserEntity user, LocalDate returnDate) {

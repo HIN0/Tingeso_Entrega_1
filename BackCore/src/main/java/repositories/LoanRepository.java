@@ -2,7 +2,6 @@ package repositories;
 
 import entities.ClientEntity;
 import entities.LoanEntity;
-import entities.ToolEntity;
 import entities.enums.LoanStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -14,8 +13,6 @@ import java.util.List;
 
 @Repository
 public interface LoanRepository extends JpaRepository<LoanEntity, Long> {
-       List<LoanEntity> findByClient(ClientEntity client);
-       List<LoanEntity> findByTool(ToolEntity tool);
        List<LoanEntity> findByStatus(LoanStatus status);
        List<LoanEntity> findByClientAndStatus(ClientEntity client, LoanStatus status);
        List<LoanEntity> findByClientAndStatusAndTotalPenaltyGreaterThan(ClientEntity client, LoanStatus status, double penaltyThreshold);

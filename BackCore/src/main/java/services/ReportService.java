@@ -2,10 +2,8 @@ package services;
 
 import entities.ClientEntity;
 import entities.LoanEntity;
-import entities.enums.ClientStatus;
 import entities.enums.LoanStatus;
 import org.springframework.stereotype.Service;
-import repositories.ClientRepository;
 import repositories.LoanRepository;
 
 import java.time.LocalDate;
@@ -15,11 +13,9 @@ import java.util.List;
 public class ReportService {
 
     private final LoanRepository loanRepository;
-    private final ClientRepository clientRepository; 
 
-    public ReportService(LoanRepository loanRepository, ClientRepository clientRepository) {
+    public ReportService(LoanRepository loanRepository) {
         this.loanRepository = loanRepository;
-        this.clientRepository = clientRepository;
     }
 
     // --- RF6.1: Préstamos por estado (CON FILTRO DE FECHA OPCIONAL) ---
@@ -64,10 +60,5 @@ public class ReportService {
             throw new IllegalArgumentException("Start date cannot be after end date.");
         }
         return loanRepository.findTopToolsByDateRange(from, to);
-    }
-
-    // --- Clientes restringidos ---
-    public List<ClientEntity> getRestrictedClients() {
-        return clientRepository.findByStatus(ClientStatus.RESTRICTED);
     }
 }

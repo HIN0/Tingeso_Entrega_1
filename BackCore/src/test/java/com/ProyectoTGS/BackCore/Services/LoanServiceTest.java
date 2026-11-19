@@ -59,7 +59,7 @@ public class LoanServiceTest {
         testUser = UserEntity.builder().username("test_user").id(1L).build();
         
         // Re-inicializamos el servicio para cada prueba
-        loanService = new LoanService(loanRepository, clientRepository, toolRepository, toolService, kardexService, tariffService, clientService);
+        loanService = new LoanService(loanRepository, clientRepository, toolRepository, toolService, tariffService, clientService);
     }
 
     // =========================================================================================================

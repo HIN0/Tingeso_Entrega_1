@@ -11,9 +11,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import repositories.ClientRepository;
 import repositories.LoanRepository;
-import repositories.ToolRepository;
 import services.ReportService;
 
 import java.time.LocalDate;
@@ -28,10 +26,6 @@ public class ReportServiceTest {
 
     @Mock
     private LoanRepository loanRepository;
-    @Mock
-    private ClientRepository clientRepository;
-    @Mock 
-    private ToolRepository toolRepository; 
 
     @InjectMocks
     private ReportService reportService;
@@ -130,24 +124,6 @@ public class ReportServiceTest {
     }
     
     // =======================================================================
-    // CLIENTES RESTRINGIDOS (getRestrictedClients)
-    // =======================================================================
-    
-    @Test
-    void getRestrictedClients_Success() {
-        // ARRANGE
-        ClientEntity restrictedClient = ClientEntity.builder().status(ClientStatus.RESTRICTED).build();
-        when(clientRepository.findByStatus(ClientStatus.RESTRICTED)).thenReturn(List.of(restrictedClient));
-
-        // ACT
-        List<ClientEntity> result = reportService.getRestrictedClients();
-
-        // ASSERT
-        assertEquals(1, result.size());
-        assertEquals(ClientStatus.RESTRICTED, result.get(0).getStatus());
-    }
-
-// =======================================================================
     // MÉTODO: getLoansByStatus (con filtro de fecha)
     // =======================================================================
 

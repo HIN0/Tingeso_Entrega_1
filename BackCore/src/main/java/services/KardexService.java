@@ -44,15 +44,6 @@ public class KardexService {
 
     // ---------------------------------------------------------------------------------------------------------------------
     @Transactional(readOnly = true)
-    public List<KardexEntity> getMovementsByTool(ToolEntity tool) {
-        if (tool == null || tool.getId() == null) {
-            throw new IllegalArgumentException("Tool entity cannot be null.");
-        }
-        return kardexRepository.findByTool_Id(tool.getId());
-    }
-
-    // ---------------------------------------------------------------------------------------------------------------------
-    @Transactional(readOnly = true)
     public List<KardexEntity> getMovementsByToolId(Long toolId) {
         // 1. Validar que el ID no sea nulo
         if (toolId == null) {

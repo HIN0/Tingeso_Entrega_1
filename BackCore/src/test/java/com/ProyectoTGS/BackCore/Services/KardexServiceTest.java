@@ -101,44 +101,6 @@ public class KardexServiceTest {
     }
 
     // =======================================================================
-    // MÉTODO: getMovementsByTool
-    // =======================================================================
-
-    @Test
-    void getMovementsByTool_Success() {
-        // ARRANGE
-        KardexEntity movement1 = KardexEntity.builder().id(1L).tool(testTool).type(MovementType.LOAN).build();
-        KardexEntity movement2 = KardexEntity.builder().id(2L).tool(testTool).type(MovementType.RETURN).build();
-
-        when(kardexRepository.findByTool_Id(testTool.getId())).thenReturn(List.of(movement1, movement2));
-
-        // ACT
-        List<KardexEntity> result = kardexService.getMovementsByTool(testTool);
-
-        // ASSERT
-        assertEquals(2, result.size());
-        verify(kardexRepository, times(1)).findByTool_Id(1L);
-    }
-
-    @Test
-    void getMovementsByTool_FailsWhenToolIsNull() {
-        // ACT & ASSERT
-        assertThrows(IllegalArgumentException.class, () -> {
-            kardexService.getMovementsByTool(null);
-        }, "Debe lanzar IllegalArgumentException si Tool es null.");
-        verify(kardexRepository, never()).findByTool_Id(any());
-    }
-
-    @Test
-    void getMovementsByTool_FailsWhenToolIdIsNull() {
-        // ACT & ASSERT
-        assertThrows(IllegalArgumentException.class, () -> {
-            kardexService.getMovementsByTool(toolWithoutId);
-        }, "Debe lanzar IllegalArgumentException si Tool ID es null.");
-        verify(kardexRepository, never()).findByTool_Id(any());
-    }
-
-    // =======================================================================
     // MÉTODO: getMovementsByToolId
     // =======================================================================
 
