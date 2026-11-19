@@ -15,8 +15,8 @@ import entities.UserEntity;
 import entities.enums.UserRole;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.test.context.ContextConfiguration;
@@ -41,6 +41,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -63,14 +64,14 @@ class WebLayerTest {
     @Autowired
     private MockMvc mvc;
 
-    @MockBean private ToolService toolService;
-    @MockBean private LoanService loanService;
-    @MockBean private ClientService clientService;
-    @MockBean private TariffService tariffService;
-    @MockBean private KardexService kardexService;
-    @MockBean private ReportService reportService;
-    @MockBean private UserService userService;
-    @MockBean private SecurityUtils securityUtils;
+    @MockitoBean private ToolService toolService;
+    @MockitoBean private LoanService loanService;
+    @MockitoBean private ClientService clientService;
+    @MockitoBean private TariffService tariffService;
+    @MockitoBean private KardexService kardexService;
+    @MockitoBean private ReportService reportService;
+    @MockitoBean private UserService userService;
+    @MockitoBean private SecurityUtils securityUtils;
 
     // Simulated Keycloak users (the realm role becomes the ROLE_ authority)
     private static RequestPostProcessor admin() {
@@ -92,9 +93,23 @@ class WebLayerTest {
 
     @Test
     void healthEndpoint_IsPublic() throws Exception {
-        // permitted without a token; the actuator itself is not part of this slice, so it is not 200
-        mvc.perform(get("/actuator/health")).andExpect(result ->
-                org.junit.jupiter.api.Assertions.assertNotEquals(401, result.getResponse().getStatus()));
+        // permitted without a token (not 401); the actuator is not part of this slice, so it answers 404
+        mvc.perform(get("/actuator/health")).andExpect(status().isNotFound());
+    }
+
+    @Test
+    void unknownUrl_Returns404NotA500() throws Exception {
+        // Before the fix, NoResourceFoundException fell into the generic handler and returned 500
+        mvc.perform(get("/tools/does/not/exist").with(admin()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404));
+    }
+
+    @Test
+    void wrongHttpMethod_Returns405NotA500() throws Exception {
+        mvc.perform(delete("/tariffs").with(admin()))
+                .andExpect(status().isMethodNotAllowed())
+                .andExpect(jsonPath("$.status").value(405));
     }
 
     @Test

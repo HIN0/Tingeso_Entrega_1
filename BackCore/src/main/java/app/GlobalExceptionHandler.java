@@ -9,11 +9,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -73,6 +75,20 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handleBadParameter(Exception ex) {
         log.warn("Invalid request parameter: {}", ex.getMessage());
         return build(HttpStatus.BAD_REQUEST, "Invalid or missing request parameter: " + parameterName(ex));
+    }
+
+    // 404 - no endpoint for this URL (without this handler the generic one returned a 500)
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<Map<String, Object>> handleUnknownUrl(NoResourceFoundException ex) {
+        log.warn("No endpoint for {}", ex.getResourcePath());
+        return build(HttpStatus.NOT_FOUND, "No endpoint found for /" + ex.getResourcePath());
+    }
+
+    // 405 - the URL exists but not for this HTTP method (e.g. DELETE on a read-only endpoint)
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ResponseEntity<Map<String, Object>> handleWrongMethod(HttpRequestMethodNotSupportedException ex) {
+        log.warn("Method not allowed: {}", ex.getMessage());
+        return build(HttpStatus.METHOD_NOT_ALLOWED, "HTTP method " + ex.getMethod() + " is not supported for this URL.");
     }
 
     // 403 - authenticated but without the required role (@PreAuthorize).

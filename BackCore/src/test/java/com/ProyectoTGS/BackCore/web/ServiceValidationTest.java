@@ -6,8 +6,8 @@ import entities.UserEntity;
 import jakarta.validation.ConstraintViolationException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.validation.ValidationAutoConfiguration;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.validation.autoconfigure.ValidationAutoConfiguration;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
@@ -36,8 +36,8 @@ class ServiceValidationTest {
     @Autowired
     private ToolService toolService;
 
-    @MockBean private ToolRepository toolRepository;
-    @MockBean private KardexService kardexService;
+    @MockitoBean private ToolRepository toolRepository;
+    @MockitoBean private KardexService kardexService;
 
     private final UserEntity user = UserEntity.builder().id(1L).username("diego").build();
 

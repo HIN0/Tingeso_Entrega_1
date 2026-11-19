@@ -1,5 +1,5 @@
-# 1. Java 17 runtime base image
-FROM eclipse-temurin:17-jdk-alpine
+# 1. Java 21 runtime (JRE: running the JAR does not need a compiler, so the image is smaller)
+FROM eclipse-temurin:21-jre-alpine
 
 # 2. JAR built by "mvnw package" (in target/)
 ARG JAR_FILE=target/*.jar

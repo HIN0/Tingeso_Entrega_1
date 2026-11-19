@@ -5,25 +5,24 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.2.5</version>
+        <version>4.1.3</version>
         <relativePath/>
     </parent>
     <groupId>com.ProyectoTGS</groupId>
     <artifactId>BackCore</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>BackCore</name>
-    <description>Base Spring Tingeso</description>
-    
+    <description>ToolRent backend: tool rental management (Spring Boot REST API)</description>
+
     <properties>
-        <java.version>17</java.version>
-        <jacoco.version>0.8.12</jacoco.version>
+        <java.version>21</java.version>
+        <jacoco.version>0.8.16</jacoco.version>
         <!-- Minimum line coverage required by the quality gate (course requirement: 90%) -->
         <jacoco.minimum.coverage>0.90</jacoco.minimum.coverage>
-        <lombok.version>1.18.30</lombok.version>
     </properties>
 
     <dependencies>
-        <!-- JPA y Base de Datos -->
+        <!-- Persistence: Spring Data JPA (Hibernate) + PostgreSQL -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>
@@ -34,31 +33,20 @@
             <scope>runtime</scope>
         </dependency>
 
-        <!-- Web -->
+        <!-- REST API (Spring MVC) and Bean Validation -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
+            <artifactId>spring-boot-starter-webmvc</artifactId>
         </dependency>
-
-        <!-- Herramientas -->
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <optional>true</optional>
-        </dependency>
-
-        <!-- Seguridad -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
         </dependency>
+
+        <!-- Security: JWT issued by Keycloak (OAuth2 resource server) -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-security</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+            <artifactId>spring-boot-starter-security-oauth2-resource-server</artifactId>
         </dependency>
 
         <!-- Health endpoint for docker compose healthchecks -->
@@ -67,36 +55,34 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
-        <!-- TESTING -->
+        <!-- Boilerplate reduction (getters, setters, builders) -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <optional>true</optional>
+        </dependency>
+
+        <!-- TESTING: JUnit + Mockito, MockMvc web slice and simulated JWT users -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- Simulated JWT users for the web layer tests (MockMvc + jwt()) -->
         <dependency>
-            <groupId>org.springframework.security</groupId>
-            <artifactId>spring-security-test</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webmvc-test</artifactId>
             <scope>test</scope>
         </dependency>
-        <!-- AssertJ  -->
         <dependency>
-            <groupId>org.assertj</groupId>
-            <artifactId>assertj-core</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security-test</artifactId>
             <scope>test</scope>
         </dependency>
-
-		<!-- Base de datos H2 para pruebas (VITAL para que corran los tests) -->
-		<dependency>
-			<groupId>com.h2database</groupId>
-			<artifactId>h2</artifactId>
-			<scope>test</scope>
-		</dependency>
     </dependencies>
 
     <build>
         <plugins>
-            <!-- Plugin de Compilación -->
+            <!-- Lombok annotation processor (version managed by Spring Boot) -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -105,12 +91,12 @@
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
-                            <version>${lombok.version}</version> 
+                            <version>${lombok.version}</version>
                         </path>
                     </annotationProcessorPaths>
                 </configuration>
             </plugin>
-            
+
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
@@ -124,35 +110,17 @@
                 </configuration>
             </plugin>
 
-            <!-- Allow Mockito inline mocks on JDK 21+ (Jenkins agents may not run JDK 17).
-                 @{argLine} keeps the JaCoCo agent configured by prepare-agent. -->
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-surefire-plugin</artifactId>
-                <configuration>
-                    <argLine>@{argLine} -Dnet.bytebuddy.experimental=true</argLine>
-                </configuration>
-            </plugin>
-
-            <!-- Plugin JaCoCo cobertura 90% -->
+            <!-- JaCoCo: coverage report + 90% quality gate on the business layer -->
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
                 <version>${jacoco.version}</version>
                 <configuration>
                     <excludes>
-						<exclude>**/dto/**</exclude>
-						<exclude>**/dtos/**</exclude>
-						<exclude>**/entity/**</exclude>
-						<exclude>**/entities/**</exclude>
-						<exclude>**/model/**</exclude>
-						<exclude>**/config/**</exclude>
-						<exclude>**/configuration/**</exclude>
-						<exclude>**/utils/**</exclude>
-						<exclude>**/app/security/**</exclude>
-						<exclude>**/*Application.*</exclude>
-						<exclude>**/app/**</exclude>
-						<exclude>**/controllers/**</exclude>
+                        <exclude>**/dtos/**</exclude>
+                        <exclude>**/entities/**</exclude>
+                        <exclude>**/app/**</exclude>
+                        <exclude>**/controllers/**</exclude>
                     </excludes>
                 </configuration>
                 <executions>
