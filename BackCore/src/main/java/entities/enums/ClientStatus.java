@@ -1,6 +1,6 @@
 package entities.enums;
 
 public enum ClientStatus {
-    ACTIVE,     // Puede solicitar préstamos
-    RESTRICTED  // Bloqueado por atrasos o multas
+    ACTIVE,     // can request loans
+    RESTRICTED  // blocked by late loans or debts
 }

@@ -1,14 +1,14 @@
-# 1. Se una imagen base con Java 17
+# 1. Java 17 runtime base image
 FROM eclipse-temurin:17-jdk-alpine
 
-# 2. Argumento para el archivo JAR (se genera en target/)
+# 2. JAR built by "mvnw package" (in target/)
 ARG JAR_FILE=target/*.jar
 
-# 3. Copiamos el JAR dentro del contenedor y lo renombramos a app.jar
+# 3. Copy the JAR into the image as app.jar
 COPY ${JAR_FILE} app.jar
 
-# 4. Exponemos el puerto 8080 (o el que uses en application.properties)
+# 4. Port of the Spring Boot application
 EXPOSE 8080
 
-# 5. Comando para ejecutar la aplicación
+# 5. Start the application
 ENTRYPOINT ["java", "-jar", "/app.jar"]

@@ -60,7 +60,7 @@ public class ClientService {
 
     @Transactional 
     public ClientEntity updateStatus(Long id, ClientStatus status) {
-        // Usar método auxiliar getClientById
+        // Reuse getClientById (throws 404 if missing)
         ClientEntity client = getClientById(id);
         client.setStatus(status);
         return clientRepository.save(client);
@@ -69,40 +69,40 @@ public class ClientService {
     @Transactional
     public ClientEntity updateClientDetails(Long id, @Valid UpdateClientRequest updateRequest) {
         ClientEntity client = getClientById(id);
-        // Actualizar solo los campos permitidos desde el DTO
+        // Update only the fields allowed by the DTO
         client.setName(updateRequest.name());
         client.setPhone(updateRequest.phone());
         client.setEmail(updateRequest.email());
-        // RUT y Status no se modifican aquí segun RF 3.2
-        return clientRepository.save(client); // Guardar cambios
+        // RUT and status are not changed here (status follows RF3.2)
+        return clientRepository.save(client); // save changes
     }
 
     @Transactional
     public ClientEntity attemptClientReactivation(Long clientId) {
-        // 1. Obtener el cliente
+        // 1. Load the client
         ClientEntity client = getClientById(clientId);
 
-        // 2. Si ya está activo, no hacer nada
+        // 2. Already active: nothing to do
         if (client.getStatus() == ClientStatus.ACTIVE) {
             System.out.println("Client " + clientId + " is already active.");
             return client;
         }
 
-        // 3. Verificar si tiene préstamos ATRASADOS (LATE)
+        // 3. Must not have LATE loans
         long lateLoanCount = loanRepository.countByClientAndStatus(client, LoanStatus.LATE);
         if (lateLoanCount > 0) {
             throw new InvalidOperationException("Cannot reactivate client: " + lateLoanCount + " late loan(s) found.");
         }
 
-        // 4. Verificar si tiene deudas PENDIENTES (RECEIVED con totalPenalty > 0)
+        // 4. Must not have unpaid debts (RECEIVED with totalPenalty > 0)
         List<LoanEntity> unpaidReceivedLoans = loanRepository.findByClientAndStatusAndTotalPenaltyGreaterThan(
                 client, LoanStatus.RECEIVED, 0.0);
         if (!unpaidReceivedLoans.isEmpty()) {
             throw new InvalidOperationException("Cannot reactivate client: " + unpaidReceivedLoans.size() + " unpaid loan(s) found.");
         }
 
-        // 5. Si pasa las validaciones, reactivar
+        // 5. All checks passed: reactivate
         System.out.println("Client " + clientId + " meets criteria for reactivation. Setting status to ACTIVE.");
-        return updateStatus(clientId, ClientStatus.ACTIVE); // Reutiliza el método existente
+        return updateStatus(clientId, ClientStatus.ACTIVE); // reuse the existing method
     }
 }

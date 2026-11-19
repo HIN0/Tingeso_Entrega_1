@@ -1,22 +1,22 @@
-# Etapa 1: Build
+# Stage 1: build the React app
 FROM node:20-alpine as build-stage
 
 WORKDIR /app
 
-# Copiamos dependencias
+# Install dependencies first (cached while package*.json does not change)
 COPY package*.json ./
 RUN npm install
 
-# Copiamos el código
+# Copy the source code
 COPY . .
 
-# Construimos la app (Genera carpeta 'dist')
+# Build the production bundle into /app/dist
 RUN npm run build
 
-# Etapa 2: Nginx
+# Stage 2: serve the static files with Nginx
 FROM nginx:alpine
 
-# Copiamos desde 'dist' (Confirmado por tu captura)
+# Copy only the build output (no node_modules or sources in the final image)
 COPY --from=build-stage /app/dist /usr/share/nginx/html
 # SPA fallback (try_files -> index.html)
 COPY nginx.conf /etc/nginx/conf.d/default.conf

@@ -18,15 +18,15 @@ public class ReportService {
         this.loanRepository = loanRepository;
     }
 
-    // --- RF6.1: Préstamos por estado (CON FILTRO DE FECHA OPCIONAL) ---
+    // --- RF6.1: loans by status (optional date filter) ---
     public List<LoanEntity> getLoansByStatus(String status, LocalDate from, LocalDate to) {
         LoanStatus loanStatus = LoanStatus.valueOf(status);
-        // Si las fechas son nulas, llama al método sin filtro
+        // No dates: no filter
         if (from == null || to == null) {
             return loanRepository.findByStatus(loanStatus);
         } else {
-            // Si hay fechas, llama al nuevo método con filtro
-            // Validar que 'from' no sea posterior a 'to'
+            // With dates: filter by start date
+            // 'from' cannot be after 'to'
             if (from.isAfter(to)) {
                 throw new IllegalArgumentException("Start date cannot be after end date.");
             }
@@ -34,16 +34,16 @@ public class ReportService {
         }
     }
 
-    // --- RF6.2: Clientes con préstamos atrasados (CON FILTRO DE FECHA OPCIONAL) ---
+    // --- RF6.2: clients with late loans (optional date filter) ---
     public List<ClientEntity> getClientsWithLateLoans(LocalDate from, LocalDate to) {
-        // Si las fechas son nulas, busca todos los clientes con préstamos LATE
+        // No dates: every client with a LATE loan
         if (from == null || to == null) {
             return loanRepository.findByStatus(LoanStatus.LATE).stream()
                     .map(LoanEntity::getClient)
                     .distinct()
                     .toList();
         } else {
-            // Si hay fechas, llama al nuevo método del repositorio
+            // With dates: filter by loan start date
             if (from.isAfter(to)) {
                 throw new IllegalArgumentException("Start date cannot be after end date.");
             }

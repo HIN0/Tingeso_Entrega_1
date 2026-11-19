@@ -27,11 +27,11 @@ public class KardexService {
     // ---------------------------------------------------------------------------------------------------------------------
     @Transactional
     public void registerMovement(ToolEntity tool, MovementType type, int quantity, UserEntity user) {
-        // 1. Validar si la herramienta existe antes de registrar
+        // 1. The tool must exist
         if (tool == null || tool.getId() == null || !toolRepository.existsById(tool.getId())) {
             throw new ResourceNotFoundException("Cannot register movement for non-existent tool.");
         }
-        // 2. Crear y guardar el movimiento en Kardex
+        // 2. Create and save the Kardex movement
         KardexEntity movement = KardexEntity.builder()
                 .tool(tool)
                 .type(type)
@@ -45,30 +45,30 @@ public class KardexService {
     // ---------------------------------------------------------------------------------------------------------------------
     @Transactional(readOnly = true)
     public List<KardexEntity> getMovementsByToolId(Long toolId) {
-        // 1. Validar que el ID no sea nulo
+        // 1. The ID is required
         if (toolId == null) {
             throw new IllegalArgumentException("Tool ID cannot be null.");
         }
-        // 2. Verificar si la herramienta existe
+        // 2. The tool must exist
         if (!toolRepository.existsById(toolId)) {
             throw new ResourceNotFoundException("Tool not found with id: " + toolId);
         }
-        // 3. Buscar los movimientos por el ID de la herramienta
+        // 3. Movements of that tool
         return kardexRepository.findByTool_Id(toolId);
     }
 
     // ---------------------------------------------------------------------------------------------------------------------
     @Transactional(readOnly = true)
     public List<KardexEntity> getMovementsByDate(LocalDateTime startDate, LocalDateTime endDate) {
-        // 1. Validar fechas 
+        // 1. Both dates are required
         if (startDate == null || endDate == null) {
             throw new IllegalArgumentException("Start and end dates cannot be null.");
         }
-        // 2. Validar que la fecha de fin no sea anterior a la de inicio
+        // 2. The end date cannot be before the start date
         if (endDate.isBefore(startDate)) {
             throw new IllegalArgumentException("End date cannot be before start date.");
         }
-        // 3. Consultar movimientos en el rango de fechas
+        // 3. Movements in the date range
         return kardexRepository.findByMovementDateBetween(startDate, endDate);
     }
 }

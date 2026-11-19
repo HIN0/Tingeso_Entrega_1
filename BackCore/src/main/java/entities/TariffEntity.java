@@ -17,11 +17,11 @@ public class TariffEntity {
     private Long id;
 
     @Column(name = "daily_rent_fee")
-    private Integer dailyRentFee;    // Tarifa diaria de arriendo
+    private Integer dailyRentFee;    // daily rental fee
 
     @Column(name = "daily_late_fee")
-    private Integer dailyLateFee;    // Tarifa diaria de multa
+    private Integer dailyLateFee;    // daily late fee
 
     @Column(name = "repair_fee")
-    private Integer repairFee;      // Cargo por reparación leve
+    private Integer repairFee;      // light damage repair charge
 }

@@ -2,7 +2,7 @@ pipeline {
     agent any
     
     environment {
-        // --- CONFIGURACIÓN ---
+        // --- CONFIGURATION ---
         DOCKER_USER = 'izkybin'
         DOCKER_CRED_ID = 'dockerhub-id'
         
@@ -11,7 +11,7 @@ pipeline {
     }
 
     stages {
-        stage('Descargar Código') {
+        stage('Checkout') {
             steps {
                 checkout scm
             }

@@ -73,7 +73,7 @@ public class LoanController {
     @PreAuthorize("hasAnyRole('ADMIN')")
     public ResponseEntity<LoanEntity> markLoanAsPaid(@PathVariable Long loanId) {
         LoanEntity updatedLoan = loanService.markLoanAsPaid(loanId);
-        // Devuelve el préstamo actualizado (con estado CLOSED y penalty 0)
+        // Returns the updated loan (status CLOSED, penalty 0)
         return ResponseEntity.ok(updatedLoan);
     }
 }

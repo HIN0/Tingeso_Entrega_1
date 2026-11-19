@@ -20,30 +20,30 @@ public class ReportController {
         this.reportService = reportService;
     }
 
-    // --- RF6.1: Modificado para aceptar fechas opcionales ---
+    // --- RF6.1: loans by status, optional date range ---
     @GetMapping("/loans")
     public List<LoanEntity> getLoansByStatus(
             @RequestParam String status,
-            // Usar required = false para que las fechas sean opcionales
+            // required = false makes the dates optional
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-        // Pasar las fechas (que pueden ser null) al servicio
+        // dates may be null (no filter)
         return reportService.getLoansByStatus(status.toUpperCase(), from, to);
     }
 
-    // --- RF6.2: Modificado para aceptar fechas opcionales ---
+    // --- RF6.2: clients with late loans, optional date range ---
     @GetMapping("/clients/late")
     public List<ClientEntity> getLateClients(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
-        // Pasar las fechas (que pueden ser null) al servicio
+        // dates may be null (no filter)
         return reportService.getClientsWithLateLoans(from, to);
     }
 
-    // --- RF6.3: Herramientas más Prestadas ---
+    // --- RF6.3: most loaned tools (ranking) ---
     @GetMapping("/tools/top")
     public List<Object[]> getTopTools(
-            // Mantener required = true o quitarlo si @RequestParam es obligatorio por defecto
+            // date range is mandatory for the ranking
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
         return reportService.getTopTools(from, to);

@@ -1,11 +1,11 @@
 package entities.enums;
 
 public enum MovementType {
-    INCOME,        // Registro de herramienta nueva
-    LOAN,          // Préstamo
-    RETURN,        // Devolución
-    REPAIR,        // En reparación
-    REPAIRED,      // Reparación terminada: la unidad vuelve al stock
-    DECOMMISSION,   // Baja definitiva
-    MANUAL_DECREASE // Ajuste manual para reducir stock
+    INCOME,        // new tool or stock income
+    LOAN,          // loan
+    RETURN,        // return
+    REPAIR,        // unit sent to repair
+    REPAIRED,      // repair finished: the unit goes back to stock
+    DECOMMISSION,   // permanently removed
+    MANUAL_DECREASE // manual stock decrease
 }

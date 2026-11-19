@@ -65,7 +65,7 @@ public class ClientController {
     @PatchMapping("/{id}/activate")
     public ResponseEntity<ClientEntity> attemptReactivation(@PathVariable Long id) {
         ClientEntity potentiallyUpdatedClient = clientService.attemptClientReactivation(id);
-        // Devuelve el estado final del cliente: puede seguir RESTRICTED si falló, o ACTIVE si tuvo éxito
+        // Returns the client with its final status (ACTIVE if reactivated)
         return ResponseEntity.ok(potentiallyUpdatedClient);
     }
 }

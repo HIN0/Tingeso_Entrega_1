@@ -27,11 +27,11 @@ public interface LoanRepository extends JpaRepository<LoanEntity, Long> {
        "ORDER BY total DESC")
        List<Object[]> findTopToolsByDateRange(@Param("from") LocalDate from, @Param("to") LocalDate to);
 
-// RF6.1: Préstamos por estado DENTRO de un rango de fechas (considerando fecha de inicio)
+// RF6.1: loans by status whose start date is in the range
 @Query("SELECT l FROM LoanEntity l WHERE l.status = :status AND l.startDate BETWEEN :from AND :to")
        List<LoanEntity> findByStatusAndStartDateBetween(@Param("status") LoanStatus status, @Param("from") LocalDate from, @Param("to") LocalDate to);
 
-// RF6.2: Clientes únicos con préstamos ATRASADOS que INICIARON en un rango de fechas
+// RF6.2: distinct clients with LATE loans started in the range
 @Query("SELECT DISTINCT l.client FROM LoanEntity l WHERE l.status = :status AND l.startDate BETWEEN :from AND :to")
        List<ClientEntity> findDistinctClientsByStatusAndStartDateBetween(@Param("status") LoanStatus status, @Param("from") LocalDate from, @Param("to") LocalDate to);
 
