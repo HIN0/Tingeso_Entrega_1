@@ -1,5 +1,6 @@
 package controllers;
 
+import dtos.CreateClientRequest;
 import dtos.UpdateClientRequest;
 import entities.ClientEntity;
 import entities.enums.ClientStatus;
@@ -38,8 +39,8 @@ public class ClientController {
     }
 
     @PostMapping
-    public ClientEntity createClient(@Valid @RequestBody ClientEntity client) {
-        return clientService.createClient(client);
+    public ClientEntity createClient(@Valid @RequestBody CreateClientRequest request) {
+        return clientService.createClient(request.toEntity());
     }
 
     @PutMapping("/{id}")

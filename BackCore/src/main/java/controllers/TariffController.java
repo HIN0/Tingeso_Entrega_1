@@ -1,6 +1,8 @@
 package controllers;
 
+import dtos.TariffRequest;
 import entities.TariffEntity;
+import jakarta.validation.Valid;
 import services.TariffService;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -8,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/tariffs")
 @CrossOrigin("*")
-@PreAuthorize("hasRole('ADMIN')") // Protege todos los métodos para solo ADMIN
+@PreAuthorize("hasRole('ADMIN')") // Only administrators can see and change tariffs (Epic 4)
 public class TariffController {
 
     private final TariffService tariffService;
@@ -17,15 +19,13 @@ public class TariffController {
         this.tariffService = tariffService;
     }
 
-    // Consultar tarifas actuales (Admin puede verlas)
     @GetMapping
     public TariffEntity getTariff() {
         return tariffService.getTariff();
     }
 
-    // Modificar tarifas (Admin puede modificarlas)
     @PutMapping
-    public TariffEntity updateTariff(@RequestBody TariffEntity updated) {
-        return tariffService.updateTariff(updated);
+    public TariffEntity updateTariff(@Valid @RequestBody TariffRequest request) {
+        return tariffService.updateTariff(request.toEntity());
     }
 }

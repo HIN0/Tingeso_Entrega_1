@@ -19,6 +19,8 @@ public class ClientEntity {
 
     private String name;
 
+    // Canonical format "12.345.678-5"; unique also at database level (protects against concurrent inserts)
+    @Column(unique = true, nullable = false)
     private String rut;
 
     private String phone;

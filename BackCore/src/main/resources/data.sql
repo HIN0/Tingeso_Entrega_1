@@ -18,26 +18,26 @@ WHERE NOT EXISTS (SELECT 1 FROM tariffs);
 -- CLIENTS (EP. 3) - 20 clients: 14 ACTIVE, 6 RESTRICTED
 INSERT INTO clients (name, rut, phone, email, status)
 SELECT * FROM (VALUES
-    ('Germán Peralta'   ,'20.589.189-6'     ,'984998810'    ,'german.peralta@correo.com'  ,'ACTIVE'),
-    ('Javier Torres'    ,'16.500.400-K'     ,'922334455'    ,'javier.torres@correo.com'   ,'ACTIVE'),
+    ('Germán Peralta'   ,'20.589.189-7'     ,'984998810'    ,'german.peralta@correo.com'  ,'ACTIVE'),
+    ('Javier Torres'    ,'16.500.400-0'     ,'922334455'    ,'javier.torres@correo.com'   ,'ACTIVE'),
     ('Paula Guzmán'     ,'20.101.202-3'     ,'944556677'    ,'paula.guzman@correo.com'    ,'ACTIVE'),
-    ('Marcos Loyola'    ,'15.654.321-0'     ,'987650001'    ,'marcos.loyola@correo.com'   ,'ACTIVE'),
-    ('Isidora Naranjo'  ,'23.400.100-9'     ,'950009876'    ,'isidora.naranjo@correo.com' ,'ACTIVE'),
-    ('Benjamín Ríos'    ,'14.123.456-5'     ,'961112233'    ,'benjamin.rios@correo.com'   ,'ACTIVE'),
-    ('Sofía Cáceres'    ,'21.789.000-1'     ,'972223344'    ,'sofia.caceres@correo.com'   ,'ACTIVE'),
-    ('Manuel Castro'    ,'18.987.654-2'     ,'983334455'    ,'manuel.castro@correo.com'   ,'ACTIVE'),
-    ('Daniela Pino'     ,'20.304.050-7'     ,'994445566'    ,'daniela.pino@correo.com'    ,'ACTIVE'),
-    ('Vicente Araya'    ,'17.111.222-3'     ,'915556677'    ,'vicente.araya@correo.com'   ,'ACTIVE'),
-    ('Fernanda Soto'    ,'22.000.100-4'     ,'926667788'    ,'fernanda.soto@correo.com'   ,'ACTIVE'),
-    ('Maria Gonzalez'   ,'20.777.373-9'     ,'987654321'    ,'maria.gonzalez@correo.com'  ,'ACTIVE'),
-    ('Andrea Soto'      ,'19.456.789-2'     ,'955443322'    ,'andrea.soto@correo.com'     ,'ACTIVE'),
-    ('Felipe Muñoz'     ,'18.321.098-7'     ,'966778899'    ,'felipe.munoz@correo.com'    ,'ACTIVE'),
-    ('Camila Rojas'     ,'21.012.345-K'     ,'977889900'    ,'camila.rojas@correo.com'    ,'RESTRICTED'),
-    ('Ricardo Díaz'     ,'17.876.543-1'     ,'933221100'    ,'ricardo.diaz@correo.com'    ,'RESTRICTED'),
-    ('Elena Vargas'     ,'22.999.888-5'     ,'911223344'    ,'elena.vargas@correo.com'    ,'RESTRICTED'),
-    ('Miguel Lagos'     ,'16.707.808-8'     ,'937778899'    ,'miguel.lagos@correo.com'    ,'RESTRICTED'),
-    ('Miguel Cárcamo'   ,'16.789.827-K'     ,'934448899'    ,'miguel.carcamo@correo.com'  ,'RESTRICTED'),
-    ('Loreto Núñez'     ,'23.123.987-0'     ,'948889900'    ,'loreto.nunez@correo.com'    ,'RESTRICTED')
+    ('Marcos Loyola'    ,'15.654.321-7'     ,'987650001'    ,'marcos.loyola@correo.com'   ,'ACTIVE'),
+    ('Isidora Naranjo'  ,'23.400.100-0'     ,'950009876'    ,'isidora.naranjo@correo.com' ,'ACTIVE'),
+    ('Benjamín Ríos'    ,'14.123.456-0'     ,'961112233'    ,'benjamin.rios@correo.com'   ,'ACTIVE'),
+    ('Sofía Cáceres'    ,'21.789.000-4'     ,'972223344'    ,'sofia.caceres@correo.com'   ,'ACTIVE'),
+    ('Manuel Castro'    ,'18.987.654-8'     ,'983334455'    ,'manuel.castro@correo.com'   ,'ACTIVE'),
+    ('Daniela Pino'     ,'20.304.050-4'     ,'994445566'    ,'daniela.pino@correo.com'    ,'ACTIVE'),
+    ('Vicente Araya'    ,'17.111.222-2'     ,'915556677'    ,'vicente.araya@correo.com'   ,'ACTIVE'),
+    ('Fernanda Soto'    ,'22.000.100-8'     ,'926667788'    ,'fernanda.soto@correo.com'   ,'ACTIVE'),
+    ('Maria Gonzalez'   ,'20.777.373-5'     ,'987654321'    ,'maria.gonzalez@correo.com'  ,'ACTIVE'),
+    ('Andrea Soto'      ,'19.456.789-8'     ,'955443322'    ,'andrea.soto@correo.com'     ,'ACTIVE'),
+    ('Felipe Muñoz'     ,'18.321.098-K'     ,'966778899'    ,'felipe.munoz@correo.com'    ,'ACTIVE'),
+    ('Camila Rojas'     ,'21.012.345-8'     ,'977889900'    ,'camila.rojas@correo.com'    ,'RESTRICTED'),
+    ('Ricardo Díaz'     ,'17.876.543-4'     ,'933221100'    ,'ricardo.diaz@correo.com'    ,'RESTRICTED'),
+    ('Elena Vargas'     ,'22.999.888-9'     ,'911223344'    ,'elena.vargas@correo.com'    ,'RESTRICTED'),
+    ('Miguel Lagos'     ,'16.707.808-7'     ,'937778899'    ,'miguel.lagos@correo.com'    ,'RESTRICTED'),
+    ('Miguel Cárcamo'   ,'16.789.827-0'     ,'934448899'    ,'miguel.carcamo@correo.com'  ,'RESTRICTED'),
+    ('Loreto Núñez'     ,'23.123.987-1'     ,'948889900'    ,'loreto.nunez@correo.com'    ,'RESTRICTED')
 ) AS v(name, rut, phone, email, status)
 WHERE NOT EXISTS (SELECT 1 FROM clients);
 

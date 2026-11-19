@@ -137,6 +137,37 @@ public class ClientServiceTest {
         verify(clientRepository, never()).save(any());
     }
 
+    @Test
+    void createClient_FailsIfNameIsBlank() {
+        newClient.setName("   ");
+
+        assertThrows(IllegalArgumentException.class, () -> clientService.createClient(newClient));
+        verify(clientRepository, never()).save(any());
+    }
+
+    @Test
+    void createClient_FailsIfRutCheckDigitIsInvalid() {
+        newClient.setRut("11.111.111-2"); // correct check digit is 1
+
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+                () -> clientService.createClient(newClient));
+        assertTrue(ex.getMessage().contains("check digit"));
+        verify(clientRepository, never()).save(any());
+    }
+
+    @Test
+    void createClient_NormalizesRutAndForcesActiveStatus() {
+        newClient.setRut("111111111");                 // no dots or dash
+        newClient.setStatus(ClientStatus.RESTRICTED);   // must be ignored for new clients
+        when(clientRepository.existsByRut("11.111.111-1")).thenReturn(false);
+        when(clientRepository.save(any(ClientEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        ClientEntity created = clientService.createClient(newClient);
+
+        assertEquals("11.111.111-1", created.getRut());
+        assertEquals(ClientStatus.ACTIVE, created.getStatus());
+    }
+
      @Test
     void createClient_FailsIfRequiredFieldIsNull_Email() {
         // ARRANGE: Probar email nulo

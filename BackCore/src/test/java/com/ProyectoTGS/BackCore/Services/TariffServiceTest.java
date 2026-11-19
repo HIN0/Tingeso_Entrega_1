@@ -92,6 +92,42 @@ public class TariffServiceTest {
         verify(tariffRepository, times(1)).save(currentTariff);
     }
 
+    @Test
+    void updateTariff_FailsWhenRentFeeIsZero() {
+        TariffEntity invalid = TariffEntity.builder().dailyRentFee(0).dailyLateFee(3000).repairFee(2500).build();
+
+        assertThrows(IllegalArgumentException.class, () -> tariffService.updateTariff(invalid));
+        verify(tariffRepository, never()).save(any());
+    }
+
+    @Test
+    void updateTariff_FailsWhenLateFeeIsNegative() {
+        TariffEntity invalid = TariffEntity.builder().dailyRentFee(1000).dailyLateFee(-1).repairFee(2500).build();
+
+        assertThrows(IllegalArgumentException.class, () -> tariffService.updateTariff(invalid));
+        verify(tariffRepository, never()).save(any());
+    }
+
+    @Test
+    void updateTariff_FailsWhenRepairFeeIsMissing() {
+        TariffEntity invalid = TariffEntity.builder().dailyRentFee(1000).dailyLateFee(3000).repairFee(null).build();
+
+        assertThrows(IllegalArgumentException.class, () -> tariffService.updateTariff(invalid));
+        verify(tariffRepository, never()).save(any());
+    }
+
+    @Test
+    void updateTariff_AllowsZeroFees() {
+        TariffEntity freeFees = TariffEntity.builder().dailyRentFee(1).dailyLateFee(0).repairFee(0).build();
+        when(tariffRepository.findAll()).thenReturn(List.of(currentTariff));
+        when(tariffRepository.save(currentTariff)).thenReturn(currentTariff);
+
+        TariffEntity result = tariffService.updateTariff(freeFees);
+
+        assertEquals(0, result.getDailyLateFee());
+        assertEquals(0, result.getRepairFee());
+    }
+
 // =======================================================================
     // MÉTODOS GETTERS ESPECÍFICOS (por completitud)
     // =======================================================================

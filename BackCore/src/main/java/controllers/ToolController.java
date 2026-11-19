@@ -1,5 +1,6 @@
 package controllers;
 
+import dtos.CreateToolRequest;
 import dtos.StockAdjustmentRequest;
 import dtos.UpdateToolRequest;
 import entities.ToolEntity;
@@ -38,9 +39,9 @@ public class ToolController {
 
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
-    public ToolEntity createTool(@Valid @RequestBody ToolEntity tool, Authentication authentication) {
+    public ToolEntity createTool(@Valid @RequestBody CreateToolRequest request, Authentication authentication) {
         UserEntity currentUser = securityUtils.getUserFromAuthentication(authentication);
-        return toolService.createTool(tool, currentUser);
+        return toolService.createTool(request.toEntity(), currentUser);
     }
 
     @PutMapping("/{id}")

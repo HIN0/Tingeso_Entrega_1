@@ -39,20 +39,23 @@ public class ClientService {
     }
 
     @Transactional
-    public ClientEntity createClient(@Valid ClientEntity client) {
-        // Validaciones básicas ya en la entidad o vía @Valid
-        if (client.getName() == null || client.getRut() == null || client.getPhone() == null || client.getEmail() == null) {
+    public ClientEntity createClient(ClientEntity client) {
+        // Business rule (Epic 3): name, RUT, phone and email are mandatory (blank counts as missing)
+        if (isBlank(client.getName()) || isBlank(client.getRut()) || isBlank(client.getPhone()) || isBlank(client.getEmail())) {
             throw new IllegalArgumentException("Client must have name, rut, phone, and email");
         }
+        // Store the RUT in one canonical format so "12345678-5" and "12.345.678-5" are the same client
+        client.setRut(RutValidator.normalize(client.getRut()));
         if (clientRepository.existsByRut(client.getRut())) {
-            // Excepción personalizada
             throw new IllegalArgumentException("Client with this RUT already exists");
         }
-        // Asignar estado inicial explícitamente si no viene (aunque ya lo hace)
-        if (client.getStatus() == null) {
-            client.setStatus(ClientStatus.ACTIVE);
-        }
+        // A new client always starts ACTIVE (restrictions come from late loans or debts)
+        client.setStatus(ClientStatus.ACTIVE);
         return clientRepository.save(client);
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     @Transactional 

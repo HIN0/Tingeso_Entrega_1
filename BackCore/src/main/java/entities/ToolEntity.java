@@ -39,7 +39,7 @@ public class ToolEntity {
     private Integer inRepair;
 
     @NotNull(message = "Replacement value cannot be null") 
-    @Min(value = 1000, message = "Replacement value cannot be negative")
+    @Min(value = 1000, message = "Replacement value must be at least 1000")
     @Column(name = "replacement_value")
     private Integer replacementValue;
 }
