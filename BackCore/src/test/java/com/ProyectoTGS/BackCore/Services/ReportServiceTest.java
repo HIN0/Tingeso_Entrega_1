@@ -3,7 +3,6 @@ package com.ProyectoTGS.BackCore.Services;
 import entities.ClientEntity;
 import entities.LoanEntity;
 import entities.ToolEntity;
-import entities.enums.ClientStatus;
 import entities.enums.LoanStatus;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

@@ -51,7 +51,7 @@ public class ReportService {
         }
     }
 
-    // --- RF6.3: Ranking (sin cambios, ya acepta fechas) ---
+    // --- RF6.3: ranking of the most loaned tools (date range required) ---
     public List<Object[]> getTopTools(LocalDate from, LocalDate to) {
         if (from == null || to == null) {
             throw new IllegalArgumentException("Date range is required for Top Tools report.");
